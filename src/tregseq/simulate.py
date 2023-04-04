@@ -1,68 +1,44 @@
 import numpy as np
 import sympy as sym
-from Bio.Seq import Seq
-
-
-def seq_to_list(seq):
-    '''
-    map each nucleotide in a DNA sequence to an integer from 0 to 3 and outputs
-    the list of integers
-
-    Args:
-        seq (str): DNA sequence
-
-    Returns:
-        list: list of integers corresponding the the DNA sequence
-    '''
-
-    mat = []
-    seq_dict = {'A':0, 'C':1, 'G':2, 'T':3}
-    for base in seq:
-        mat.append(seq_dict[base])
-
-    return mat
+import seq_utils
 
 
 def fix_wt(matrix, seq):
-    '''_summary_
+    '''
+    fix the energy matrix such that the binding energy for the wild type base
+    identity at each position is 0
 
     Args:
-        matrix (_type_): _description_
-        seq (_type_): _description_
+        matrix (arr): energy matrix
+        seq (str): wild type sequence of binding site
 
     Returns:
-        _type_: _description_
+        arr: fixed energy matrix
     '''     
 
-    seq = seq_to_list(seq)
+    seq = seq_utils.seq_to_list(seq)
     mat_fixed = []
     for i, row in enumerate(matrix):
         mat_fixed.append([val - row[seq[i]] for val in row])
 
-    return mat_fixed
+    return np.asarray(mat_fixed)
     
 
-def get_regulatory_region(genome, TSS, reverse=False):
-    #115 upstream of the transcription start site and 45 bases downstream
-
-    if not reverse:
-        region = genome[(TSS-115):(TSS+45)]
-    else:
-        _region = genome[(TSS-45):(TSS+115)]
-        region = str(Seq(_region).reverse_complement())
-
-    return region
-
-
-def find_binding_site(region, binding_site):
-
-    start = region.find(binding_site)
-    end = start + len(binding_site)
-
-    return start, end
-
-
 def get_d_energy(seq, energy_mat, e_wt=0):
+    '''
+    given an energy matrix and the sequence of the binding site, calculate
+    the total binding energy. if the energy matrix is not fixed, we add
+    the binding energy to the wild type sequence.
+
+    Args:
+        seq (str): sequence of binding site
+        energy_mat (arr): energy matrix
+        e_wt (int, optional): total binding energy to the wild type binding
+        site. Defaults to 0.
+
+    Returns:
+        float: total binding energy in kBT units
+    '''    
 
     indices = {'A': 0, 'C': 1, 'G': 2, 'T': 3}
     if energy_mat.shape[0] == 4:
@@ -74,14 +50,27 @@ def get_d_energy(seq, energy_mat, e_wt=0):
     return d_energy + e_wt
 
 
-def get_weight(seq, energy_mat, n_TF, n_NS, e_wt=0):
+def get_weight(seq, energy_mat, e_wt=0):
+    '''
+    compute the Boltzmann weight, exp(- d_energy / kBT). note that here
+    d_energy is already in kBT units and so we don't have to perform the division.
+
+    Args:
+        seq (str): sequence of binding site
+        energy_mat (arr): energy matrix
+        e_wt (int, optional): total binding energy to the wild type binding
+        site. Defaults to 0.
+
+    Returns:
+        float: Boltzmann weight.
+    '''    
 
     d_energy = get_d_energy(seq, energy_mat, e_wt=e_wt)
     
-    return n_TF / n_NS * np.exp(- d_energy)
+    return np.exp(- d_energy)
 
 
-## computing pbound using canonical ensemble
+## computing pbound and fold change using canonical ensemble
 
 def constitutive_pbound(p_seq, p_emat):
 
@@ -91,12 +80,55 @@ def constitutive_pbound(p_seq, p_emat):
     return _pbound / (1 + _pbound)
 
 
-def simrep_pbound(p_seq, r_seq, p_emat, r_emat, n_p, n_r, n_NS, e_wt=0):
+def simrep_pbound(p_seq, r_seq, p_emat, r_emat, n_p, n_r, n_NS,
+                  ep_wt=0, er_wt=0):
+    '''
+    calculate the probability of binding for a gene with the simple repression
+    regulatory architecture
 
-    w_p = get_weight(p_seq, p_emat, n_p, n_NS)
-    w_r = get_weight(r_seq, r_emat, n_r, n_NS, e_wt=e_wt)
+    Args:
+        p_seq (str): sequence of the RNAP binding site
+        r_seq (str): sequence of the repressor binding site
+        p_emat (arr): energy matrix for RNAP
+        r_emat (arr): energy matrix for the repressor
+        n_p (int): number of RNAPs
+        n_r (int): number of repressors
+        n_NS (int): number of non-specific binding sites
+        ep_wt (int, optional): binding energy to the wild type RNAP binding
+        site. Defaults to 0.
+        er_wt (int, optional): binding energy to the wild type repressor binding
+        site. Defaults to 0.
 
-    return w_p / (1 + w_p + w_r)
+    Returns:
+        float: probability of RNAP binding
+    '''    
+
+    w_p = get_weight(p_seq, p_emat, e_wt=ep_wt)
+    w_r = get_weight(r_seq, r_emat, e_wt=er_wt)
+
+    return (n_p / n_NS * w_p) / (1 + n_p / n_NS * w_p + n_r / n_NS * w_r)
+
+
+def simrep_fc(r_seq, r_emat, n_r, n_NS, e_wt=0):
+    '''
+    calculate fold change in expression levesl when repressors are introduced
+    into the system
+
+    Args:
+        r_seq (_type_): sequence of the repressor binding site
+        r_emat (_type_): energy matrix for the repressor
+        n_r (_type_): number of repressors
+        n_NS (_type_): number of non-specific binding sites
+        e_wt (int, optional): binding energy to the wild type repressor binding
+        site. Defaults to 0.
+
+    Returns:
+        float: fold change
+    '''    
+
+    w_r = get_weight(r_seq, r_emat, e_wt=e_wt)
+
+    return 1 / (1 + n_r / n_NS * w_r)
 
 
 def simact_pbound(p_seq, a_seq, p_emat, a_emat, e_ap, n_p, n_a, n_NS):
@@ -107,13 +139,6 @@ def simact_pbound(p_seq, a_seq, p_emat, a_emat, e_ap, n_p, n_a, n_NS):
     _pbound = 1 + n_NS / (n_p * f_reg) * np.exp(get_d_energy(p_seq, p_emat))
     pbound = 1 / _pbound
     return pbound
-    
-
-def get_foldchange(r_seq, r_emat, n_r, n_NS, e_wt=0):
-
-    w_r = get_weight(r_seq, r_emat, n_r, n_NS, e_wt=e_wt)
-
-    return 1 / (1 + w_r)
 
 
 ## computing occupancy using chemical potential
