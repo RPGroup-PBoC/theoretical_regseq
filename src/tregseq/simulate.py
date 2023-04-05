@@ -1,6 +1,6 @@
 import numpy as np
 import sympy as sym
-import seq_utils
+from .seq_utils import seq_to_list
 
 
 def fix_wt(matrix, seq):
@@ -16,7 +16,7 @@ def fix_wt(matrix, seq):
         arr: fixed energy matrix
     '''     
 
-    seq = seq_utils.seq_to_list(seq)
+    seq = seq_to_list(seq)
     mat_fixed = []
     for i, row in enumerate(matrix):
         mat_fixed.append([val - row[seq[i]] for val in row])

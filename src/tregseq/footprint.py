@@ -1,6 +1,5 @@
 import numpy as np
 import pandas as pd
-import utils
 
 def match_seqs(mut_list, wtseq):
     '''
@@ -28,44 +27,35 @@ def match_seqs(mut_list, wtseq):
     return all_mutarr
 
 
-def get_pb(all_mutarr, cnt_seq):
+def get_p_b(all_mutarr, n_seqs):
     '''
     compute the probability that each base position is mutated
 
     Args:
         all_wtarr (arr): boolean array representing whether each base position
             in each promoter variant is mutated
-        cnt_seq (arr): total RNA and DNA count for each promoter variant
+        n_seqs (int): total number of promoter variants
 
     Returns:
-        arr: probability distribution of wild type and mutated bases. here each
-        column is a probability distribution.
+        arr: array of probability distributions of wild type and mutated bases
+            at each base position.
     '''    
 
-    #mut_cnt = np.multiply(all_mutarr, np.asarray(cnt_seq)[:, np.newaxis])
-    #tot_mut_cnt = np.sum(mut_cnt, axis=0)
     tot_mut_cnt = np.sum(all_mutarr, axis=0)
-    #p_mut = tot_mut_cnt / sum(cnt_seq)
-    p_mut = tot_mut_cnt / len(cnt_seq)
+    p_mut = tot_mut_cnt / n_seqs
 
     return np.asarray([1 - p_mut, p_mut]).T
 
 
-def count_mut(all_mutarr, cnt_seq, tot_cnt_seq):
-    '''_summary_
+def get_p_mu(ex_data, nbins, upper_bound):
 
-    Args:
-        all_mutarr (_type_): _description_
-        cnt_seq (_type_): _description_
-        tot_cnt_seq (_type_): _description_
-
-    Returns:
-        _type_: _description_
-    '''
-
-    _cnt = np.multiply(all_mutarr, cnt_seq[:, np.newaxis])
-    cnt = np.sum(_cnt, axis=0) / np.sum(tot_cnt_seq)
-    return cnt
+    bins = np.linspace(0, upper_bound, nbins, dtype=int)
+    out = pd.cut(ex_data, bins=bins,
+                include_lowest=True, right=False)
+    cnt = out.value_counts().tolist()
+    cnt.append(len(ex_data) - sum(cnt))
+    p_mu = np.asarray(cnt) / sum(cnt)
+    return p_mu
 
 
 def mi_footprint(fpath_to_seqcnt, wtseq):
