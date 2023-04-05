@@ -1,5 +1,6 @@
 import numpy as np
 import pandas as pd
+from .utils import smoothing
 
 def match_seqs(mut_list, wtseq):
     '''
@@ -109,3 +110,23 @@ def get_info_footprint(mut_list, mu_data, wtseq,
                                pseudocount=pseudocount, len_promoter=len_promoter)
     footprint = MI(list_p_b, p_mu, list_joint_p)
     return footprint
+
+
+def get_expression_shift(mut_list, mu_data, wtseq,
+                         len_promoter=160, smoothed=True, windowsize=1):
+    n_seqs = len(mu_data)
+    avg_mu = np.mean(mu_data)
+    all_mutarr = match_seqs(mut_list, wtseq)
+
+    exshift_list = []
+    for position in range(len_promoter):
+        ex_shift = 0
+        for i_seq in range(n_seqs):
+            ex_shift += all_mutarr[i_seq][position] * (mu_data[i_seq] / avg_mu - 1)
+        ex_shift /= n_seqs
+        exshift_list.append(ex_shift)
+    
+    if smoothed:
+        exshift_list = smoothing(exshift_list, windowsize=windowsize)
+    
+    return exshift_list
