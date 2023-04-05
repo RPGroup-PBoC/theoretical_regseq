@@ -67,7 +67,7 @@ def get_weight(seq, energy_mat, e_wt=0):
 
     d_energy = get_d_energy(seq, energy_mat, e_wt=e_wt)
     
-    return np.exp(- d_energy)
+    return np.exp(-d_energy)
 
 
 ## computing pbound and fold change using canonical ensemble
