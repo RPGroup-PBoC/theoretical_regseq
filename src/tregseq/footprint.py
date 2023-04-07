@@ -83,9 +83,10 @@ def get_joint_p(all_mutarr, mu_bins, nbins, n_seqs,
     return list_joint_p
 
 
-def MI(list_p_b, p_mu, list_joint_p):
+def MI(list_p_b, p_mu, list_joint_p,
+       len_promoter=160):
     mutual_info = []
-    for position in range(160):
+    for position in range(len_promoter):
         p_b = list_p_b[position]
         joint_p = list_joint_p[position]
 
