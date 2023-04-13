@@ -125,7 +125,7 @@ def get_expression_shift(mut_list, mu_data, wtseq,
     for position in range(len_promoter):
         ex_shift = 0
         for i_seq in range(n_seqs):
-            ex_shift += all_mutarr[i_seq][position] * (1 - mu_data[i_seq] / avg_mu)
+            ex_shift += all_mutarr[i_seq][position] * (mu_data[i_seq] / avg_mu - 1)
         ex_shift /= n_seqs
         exshift_list.append(ex_shift)
     
