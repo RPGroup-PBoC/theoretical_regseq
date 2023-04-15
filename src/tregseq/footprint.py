@@ -102,7 +102,8 @@ def MI(list_p_b, p_mu, list_joint_p,
 
 def get_info_footprint(mut_list, mu_data, wtseq,
                        nbins, upper_bound,
-                       pseudocount=10**(-6), len_promoter=160):
+                       pseudocount=10**(-6), len_promoter=160,
+                       smoothed=True, windowsize=3):
     n_seqs = len(mut_list)
 
     all_mutarr = match_seqs(mut_list, wtseq)
@@ -112,11 +113,15 @@ def get_info_footprint(mut_list, mu_data, wtseq,
     list_joint_p = get_joint_p(all_mutarr, mu_bins, nbins, n_seqs,
                                pseudocount=pseudocount, len_promoter=len_promoter)
     footprint = MI(list_p_b, p_mu, list_joint_p)
+
+    if smoothed:
+        footprint = smoothing(footprint, windowsize=windowsize)
+
     return footprint
 
 
 def get_expression_shift(mut_list, mu_data, wtseq,
-                         len_promoter=160, smoothed=True, windowsize=1):
+                         len_promoter=160, smoothed=True, windowsize=3):
     n_seqs = len(mu_data)
     avg_mu = np.mean(mu_data)
     all_mutarr = match_seqs(mut_list, wtseq)
