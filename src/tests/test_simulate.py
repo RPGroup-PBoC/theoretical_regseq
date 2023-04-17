@@ -1,5 +1,5 @@
 import numpy as np
-from tregseq import simulate
+from tregs import simulate
 
 def test_get_d_energy1():
     testmat = np.stack([np.arange(5)] * 4)

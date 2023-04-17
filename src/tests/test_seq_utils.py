@@ -1,5 +1,5 @@
 from Bio import SeqIO
-from tregseq import seq_utils
+from tregs import seq_utils
 
 import os
 from distutils import dir_util

@@ -4,7 +4,7 @@ with open("README.md", "r") as fh:
     long_description = fh.read()
 
 setuptools.setup(
-    name="tregseq",
+    name="tregs",
     version="0.0.1",
     author="Rosalind Pan, Tom Roeschinger",
     author_email="rosalindpan@caltech.edu",
