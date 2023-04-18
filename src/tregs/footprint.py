@@ -1,15 +1,16 @@
+import datetime
 import numpy as np
 import pandas as pd
 from .utils import smoothing
 
-def match_seqs(mut_list, wtseq):
+def match_seqs(wtseq, mut_list):
     '''
     given a list of promoter variants, check whether the base identity at each
     position matches the base identity in the wild type sequence.
 
     Args:
-        mut_list (list): list of promoter variant sequences
         wtseq (str): sequence of the wild type promoter
+        mut_list (list): list of promoter variant sequences
 
     Returns:
         arr: each row represents a sequence. each column represents a position.
@@ -18,14 +19,10 @@ def match_seqs(mut_list, wtseq):
     '''    
 
     wtlist = np.array(list(wtseq))
-    seqlen = len(wtseq)
-    all_mutarr = np.zeros((len(mut_list), seqlen))
-
-    for i, mut in enumerate(mut_list):
-        s = np.array(list(mut))
-        all_mutarr[i, :seqlen] = (wtlist != s)
+    wt_arr = np.vstack([wtlist] * len(mut_list))
+    mut_arr = np.asarray([list(mutant) for mutant in mut_list.tolist()])
     
-    return all_mutarr
+    return wt_arr != mut_arr
 
 
 def get_p_b(all_mutarr, n_seqs):
@@ -67,21 +64,35 @@ def get_p_mu(bin_cnt, n_seqs):
     return bin_cnt / n_seqs
 
 
-def get_joint_p(all_mutarr, mu_bins, nbins, n_seqs,
+def get_joint_p(all_mutarr, mu_bins, nbins,
                 pseudocount=10**(-6), len_promoter=160):
-    list_joint_p = []
-    for position in range(len_promoter):
-        joint_p = np.zeros((2, nbins)) + pseudocount
-        # adding a pseudocount to prevent zero-division error
-        for i in range(n_seqs):
-            for j in range(nbins):
-                if (all_mutarr[i][position] == 0) & (mu_bins[i] == j):
-                    joint_p[0][j] += 1
-                elif (all_mutarr[i][position] == 1) & (mu_bins[i] == j):
-                    joint_p[1][j] += 1
+    '''
+    calculates the joint probability distribution between mutations and expression
+    levels at each base position along the promoter sequence
 
-        joint_p /= np.sum(joint_p)
-        list_joint_p.append(joint_p)
+    Args:
+        all_mutarr (bool arr): array indicating whether each position in each
+            sequence is mutated (each row represents a sequence. each column
+            represents a position. an entry of 0 means the base identity is wild
+            type. an entry of 1 means the base is mutated.)
+        mu_bins (int arr): array indicating the index of the expression level
+            bin each sequence is in.
+        nbins (int): total number of bins for expression levels.
+        pseudocount (float, optional): Prevents zero division error.
+            Defaults to 10**(-6).
+        len_promoter (int, optional): length of the promoter. Defaults to 160.
+
+    Returns:
+        float arr: a list of the joint probability distributions at each base position
+    '''    
+    
+    mu_bins_tmp = mu_bins[:, np.newaxis]
+    list_joint_p = np.zeros((len_promoter, 2, nbins)) + pseudocount
+    for b in range(2):
+        for mu in range(nbins):
+            list_joint_p[:, b, mu] += np.sum(((all_mutarr == b) * (mu_bins_tmp == mu)), axis=0) 
+    list_joint_p = list_joint_p / np.sum(list_joint_p, axis=(1, 2))[:, np.newaxis, np.newaxis]
+                            
     return list_joint_p
 
 
@@ -106,14 +117,19 @@ def get_info_footprint(mut_list, mu_data, wtseq,
                        smoothed=True, windowsize=3):
     n_seqs = len(mut_list)
 
-    all_mutarr = match_seqs(mut_list, wtseq)
+    #print('start time: {}'.format(datetime.datetime.now()))
+    all_mutarr = match_seqs(wtseq, mut_list)
+    #print('finished match_seqs: {}'.format(datetime.datetime.now()))
     list_p_b = get_p_b(all_mutarr, n_seqs)
+    #print('finished calculating p_b: {}'.format(datetime.datetime.now()))
     mu_bins, bin_cnt = bin_expression_levels(mu_data, nbins, upper_bound)
     p_mu = get_p_mu(bin_cnt, n_seqs)
-    list_joint_p = get_joint_p(all_mutarr, mu_bins, nbins, n_seqs,
+    #print('finished calculating p_mu: {}'.format(datetime.datetime.now()))
+    list_joint_p = get_joint_p(all_mutarr, mu_bins, nbins,
                                pseudocount=pseudocount, len_promoter=len_promoter)
+    #print('finished calculating joint probability distribution: {}'.format(datetime.datetime.now()))
     footprint = MI(list_p_b, p_mu, list_joint_p)
-
+    #print('finished calculating mutual information: {}'.format(datetime.datetime.now()))
     if smoothed:
         footprint = smoothing(footprint, windowsize=windowsize)
 
@@ -124,7 +140,7 @@ def get_expression_shift(mut_list, mu_data, wtseq,
                          len_promoter=160, smoothed=True, windowsize=3):
     n_seqs = len(mu_data)
     avg_mu = np.mean(mu_data)
-    all_mutarr = match_seqs(mut_list, wtseq)
+    all_mutarr = match_seqs(wtseq, mut_list)
 
     exshift_list = []
     for position in range(len_promoter):
@@ -188,7 +204,7 @@ def MI_old(p_mut_tot, seq_cnt,
 
 def footprint_old(df, wtseq):
 
-    all_mutarr = match_seqs(df['seq'].values, wtseq)
+    all_mutarr = match_seqs(wtseq, df['seq'].values)
     all_wtarr = flip_boolean(all_mutarr)
 
     seq_cnt = df[['ct_0', 'ct_1']].apply(np.sum).values
