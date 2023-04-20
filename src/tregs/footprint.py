@@ -114,7 +114,8 @@ def MI(list_p_b, p_mu, list_joint_p,
 def get_info_footprint(mut_list, mu_data, wtseq,
                        nbins, upper_bound,
                        pseudocount=10**(-6), len_promoter=160,
-                       smoothed=True, windowsize=3):
+                       smoothed=True, windowsize=3,
+                       fast=False):
     n_seqs = len(mut_list)
 
     #print('start time: {}'.format(datetime.datetime.now()))
