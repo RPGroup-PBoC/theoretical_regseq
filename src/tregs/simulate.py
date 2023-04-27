@@ -96,7 +96,8 @@ def simrep_pbound(p_seq, r_seq, p_emat, r_emat, n_p, n_r, n_NS,
 
     Returns:
         float: probability of RNAP binding
-    '''    
+    '''
+    #print(n_p, n_r)
 
     w_p = get_weight(p_seq, p_emat, e_wt=ep_wt)
     w_r = get_weight(r_seq, r_emat, e_wt=er_wt)
@@ -142,9 +143,9 @@ def simrep_helper(mutants, rnap_start, rnap_end, rep_start, rep_end,
                                      n_p, n_r, n_NS,
                                      ep_wt=ep_wt, er_wt=er_wt)
         l_tr.append(rv)
-    df_tr = pd.DataFrame.from_records(l_tr)
+    df_simrep = pd.DataFrame.from_records(l_tr)
 
-    return df_tr
+    return df_simrep
 
 
 def get_dna_cnt(n_seqs):
@@ -170,22 +171,22 @@ def simrep(wtseq, rnap_wtseq, rep_wtseq, rnap_emat, O1_emat,
     rnap_start, rnap_end = find_binding_site(wtseq, rnap_wtseq)
     rep_start, rep_end = find_binding_site(wtseq,rep_wtseq)
 
-    df_tr = simrep_helper(mutants, rnap_start, rnap_end, rep_start, rep_end,
+    df_simrep = simrep_helper(mutants, rnap_start, rnap_end, rep_start, rep_end,
                           rnap_emat, O1_emat, n_p, n_r, n_NS,
                           ep_wt, er_wt)
     
-    dna_cnt = get_dna_cnt(len(df_tr))
-    df_tr['ct_0'] = dna_cnt
-    df_tr = df_tr[df_tr.ct_0 != 0.0]
+    dna_cnt = get_dna_cnt(len(df_simrep))
+    df_simrep['ct_0'] = dna_cnt
+    df_simrep = df_simrep[df_simrep.ct_0 != 0.0]
 
-    df_tr['ct_1'] = 1 + df_tr['ct_0'] * df_tr['pbound'] * scaling_factor
-    df_tr['ct_1'] = df_tr['ct_1'].astype(int)
-    df_tr['ct'] = df_tr['ct_0'] + df_tr['ct_1']
+    df_simrep['ct_1'] = 1 + df_simrep['ct_0'] * df_simrep['pbound'] * scaling_factor
+    df_simrep['ct_1'] = df_simrep['ct_1'].astype(int)
+    df_simrep['ct'] = df_simrep['ct_0'] + df_simrep['ct_1']
 
-    df_tr['ct'] = df_tr['ct'].astype(float)
-    df_tr['ct_0'] = df_tr['ct_0'].astype(float)
-    df_tr['ct_1'] = df_tr['ct_1'].astype(float)
-    df_tr['norm_ct_1'] = df_tr['ct_1'] / df_tr['ct_0']
+    df_simrep['ct'] = df_simrep['ct'].astype(float)
+    df_simrep['ct_0'] = df_simrep['ct_0'].astype(float)
+    df_simrep['ct_1'] = df_simrep['ct_1'].astype(float)
+    df_simrep['norm_ct_1'] = df_simrep['ct_1'] / df_simrep['ct_0']
 
-    return df_tr
+    return df_simrep
 

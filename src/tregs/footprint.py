@@ -57,6 +57,7 @@ def bin_expression_levels(mu_data, nbins, upper_bound):
     
     mu_bins = binned.values
     bin_cnt = binned.value_counts().values
+
     return mu_bins, bin_cnt
 
 
@@ -105,7 +106,9 @@ def MI(list_p_b, p_mu, list_joint_p,
 
         mi = 0
         for i in range(len(p_mu)):
+            #print(joint_p[0][i], p_b[0] * p_mu[i])
             mi += joint_p[0][i] * np.log2(joint_p[0][i] / (p_b[0] * p_mu[i]))
+            #print(joint_p[1][i], p_b[1] * p_mu[i])
             mi += joint_p[1][i] * np.log2(joint_p[1][i] / (p_b[1] * p_mu[i]))
         mutual_info.append(mi)
     return mutual_info
