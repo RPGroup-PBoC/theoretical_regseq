@@ -48,7 +48,8 @@ def get_p_b(all_mutarr, n_seqs):
 
 
 def bin_expression_levels(mu_data, nbins, upper_bound):
-    bins = np.linspace(0, upper_bound, nbins, dtype=int).tolist()
+    #bins = np.linspace(0, upper_bound, nbins, dtype=int).tolist()
+    bins = np.linspace(0, upper_bound, nbins).tolist()
     bins.append(int(max(mu_data) + 1))
 
     binned = pd.cut(mu_data, bins=bins,
