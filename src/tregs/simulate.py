@@ -179,7 +179,7 @@ def simrep(wtseq, rnap_wtseq, rep_wtseq, rnap_emat, O1_emat,
     df_simrep['ct_0'] = dna_cnt
     df_simrep = df_simrep[df_simrep.ct_0 != 0.0]
 
-    df_simrep['ct_1'] = 1 + df_simrep['ct_0'] * df_simrep['pbound'] * scaling_factor
+    df_simrep['ct_1'] = 0.1 + df_simrep['ct_0'] * df_simrep['pbound'] * scaling_factor
     df_simrep['ct_1'] = df_simrep['ct_1'].astype(int)
     df_simrep['ct'] = df_simrep['ct_0'] + df_simrep['ct_1']
 
