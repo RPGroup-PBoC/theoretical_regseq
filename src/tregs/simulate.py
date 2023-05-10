@@ -108,15 +108,11 @@ def simrep_pbound(p_seq, r_seq, p_emat, r_emat, n_p, n_r, n_NS,
 def simact_pbound(p_seq, a_seq, p_emat, a_emat, n_p, n_a, n_NS,
                   ep_wt=0, ea_wt=0, e_ap=0):
 
-    w_p = get_weight(p_seq, p_emat, e_wt=ep_wt)
-    w_a = get_weight(a_seq, a_emat, e_wt=ea_wt)
+    p = (n_p / n_NS) * get_weight(p_seq, p_emat, e_wt=ep_wt)
+    a = (n_a / n_NS) * get_weight(a_seq, a_emat, e_wt=ea_wt)
+    w = np.exp(-e_ap)
 
-    freg_num = 1 + n_a / n_NS * w_a
-    freg_denom = 1 + n_a / n_NS * w_a * np.exp(- e_ap)
-    freg = freg_num / freg_denom
-
-    pbound_denom = 1 + n_NS / (n_p * freg * w_p)
-    pbound = 1 / pbound_denom
+    pbound = (p + a * p * w) / (1 + a + p + a * p * w)
 
     return pbound
 
