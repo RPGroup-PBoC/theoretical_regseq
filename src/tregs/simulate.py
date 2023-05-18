@@ -4,6 +4,7 @@ import pandas as pd
 import sympy as sym
 from .seq_utils import seq_to_list, find_binding_site
 from .wgregseq import mutations_rand
+from .solve_utils import solve_biquadratic
 
 
 def fix_wt(matrix, seq):
@@ -139,10 +140,53 @@ def simrep_fc(r_seq, r_emat, n_r, n_NS, e_wt=0):
     return 1 / (1 + n_r / n_NS * w_r)
 
 
+def simrep_pbound_cp(p_seq, r_seq, p_emat, r_emat, P, R, M, N,
+                     ep_wt=0, er_wt=0, ep_NS=0, er_NS=0):
+    '''
+    calculate pbound for a promoter with simple repression regulatory
+    architecture using the chemical potential approach.
+
+    Args:
+        p_seq (str): sequence of the RNAP binding site
+        r_seq (str): sequence of the repressor binding site
+        p_emat (arr): energy matrix for RNAP
+        r_emat (arr): energy matrix for the repressor
+        P (int): number of RNA polymerases.
+        R (int): number of repressors.
+        M (int): number of specific binding sites (i.e. copy number of the promoter).
+        N (int): number of non-specific binding sites
+        ep_wt (int, optional): binding energy to the wild type RNAP binding
+            site. Defaults to 0.
+        er_wt (int, optional): binding energy to the wild type repressor binding
+            site. Defaults to 0.
+        ep_NS (int, optional): RNAP binding affinity at the non-specific
+            binding sites (in kBT units). Defaults to 0.
+        er_NS (int, optional): repressor binding affinity at the non-specific
+            binding sites (in kBT units) Defaults to 0.
+
+    Returns:
+        (float): probability of RNAP binding
+    '''
+
+    x_p = np.exp(-1 * get_d_energy(p_seq, p_emat, e_wt=ep_wt))
+    x_r = np.exp(-1 * get_d_energy(r_seq, r_emat, e_wt=er_wt))
+    y_p = np.exp(-1 * ep_NS)
+    y_r = np.exp(-1 * er_NS)
+    l_p, l_r = solve_biquadratic(P, R, M, N, x_p, y_p, x_r, y_r)
+
+    pbound = l_p * x_p / (1 + l_p * x_p + l_r * x_r)
+
+    #occNS_rnap = l_p * y_p / (1 + l_p * y_p + l_r * y_r)
+    #occS_rep = l_r * x_r / (1 + l_p * x_p + l_r * x_r)
+    #occNS_rep = l_r * y_r / (1 + l_p * y_p + l_r * y_r)
+
+    return pbound
+
+
 ## performing the simulation
 
 def simrep_helper(mutants, rnap_start, rnap_end, rep_start, rep_end,
-                  rnap_emat, O1_emat, n_p, n_r, n_NS,
+                  rnap_emat, rep_emat, n_p, n_r, n_NS,
                   ep_wt, er_wt):
 
     l_tr = []
@@ -151,7 +195,7 @@ def simrep_helper(mutants, rnap_start, rnap_end, rep_start, rep_end,
         rv['seq'] = mut
         rnap_mut = mut[rnap_start:rnap_end].upper()
         rep_mut = mut[rep_start:rep_end].upper()
-        rv['pbound'] = simrep_pbound(rnap_mut, rep_mut, rnap_emat, O1_emat,
+        rv['pbound'] = simrep_pbound(rnap_mut, rep_mut, rnap_emat, rep_emat,
                                      n_p, n_r, n_NS,
                                      ep_wt=ep_wt, er_wt=er_wt)
         l_tr.append(rv)
@@ -201,4 +245,3 @@ def simrep(wtseq, rnap_wtseq, rep_wtseq, rnap_emat, rep_emat,
     df_simrep['norm_ct_1'] = df_simrep['ct_1'] / df_simrep['ct_0']
 
     return df_simrep
-

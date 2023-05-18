@@ -4,3 +4,4 @@ from .seq_utils import *
 from .simulate import *
 from .utils import *
 from .wgregseq import *
+from .solve_utils import *
