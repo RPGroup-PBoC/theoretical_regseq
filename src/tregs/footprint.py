@@ -57,7 +57,7 @@ def bin_expression_levels(mu_data, nbins, upper_bound):
                     include_lowest=True, right=False)
     
     mu_bins = binned.values
-    bin_cnt = binned.value_counts().values
+    bin_cnt = binned.value_counts(sort=False).values
 
     return mu_bins, bin_cnt
 
