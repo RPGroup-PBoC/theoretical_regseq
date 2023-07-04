@@ -217,11 +217,14 @@ def get_dna_cnt(n_seqs):
 
 def simrep(wtseq, rnap_wtseq, rep_wtseq, rnap_emat, rep_emat, 
            ep_wt, er_wt, n_NS, n_p, n_r,
-           num_mutants=10000, mutrate=0.1, scaling_factor=100):
+           num_mutants=10000, mutrate=0.1,
+           allowed_alph=None,
+           scaling_factor=100):
     
     mutants = np.unique(mutations_rand(wtseq,
                                        rate=mutrate,
                                        num_mutants=num_mutants,
+                                       allowed_alph=allowed_alph,
                                        number_fixed=True))
 
     rnap_start, rnap_end = find_binding_site(wtseq, rnap_wtseq)

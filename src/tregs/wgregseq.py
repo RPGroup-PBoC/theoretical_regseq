@@ -53,6 +53,14 @@ def mutate_from_index(sequence, index, alph):
     return "".join(seq_list)
 
 
+def mutate_with_bias(sequence, index, letters, allowed_alph):
+    seq_list = list(sequence)
+    for _loci in index:
+        loci = _loci[0]
+        seq_list[loci] = make_mutation(seq_list[loci], letters, allowed_alph).lower()
+    return "".join(seq_list)
+
+
 def mutations_rand(
     sequence, 
     num_mutants,
@@ -60,6 +68,7 @@ def mutations_rand(
     site_start=0, 
     site_end=None, 
     alph_type="DNA",
+    allowed_alph=None,
     number_fixed=False,
     keep_wildtype=False,
 ):
@@ -132,8 +141,12 @@ def mutations_rand(
     else:
         raise ValueError("Alphabet type has to be either \"DNA\" or \"Numeric\"")
     
-    for i, x in enumerate(mutant_indeces):
-        mutants[i + i_0] = sequence[0:site_start] + mutate_from_index(mutation_window, x, letters) + sequence[site_end:]
+    if allowed_alph is not None:
+        for i, x in enumerate(mutant_indeces):
+            mutants[i + i_0] = sequence[0:site_start] + mutate_with_bias(mutation_window, x, letters, allowed_alph) + sequence[site_end:]
+    else:
+        for i, x in enumerate(mutant_indeces):
+            mutants[i + i_0] = sequence[0:site_start] + mutate_from_index(mutation_window, x, letters) + sequence[site_end:]
         
     return mutants
 
@@ -167,3 +180,32 @@ def filter_mutation(letter, alph):
             result[j] = alph[i]
             j += 1
     return result
+
+
+@numba.njit
+def choose_mutation_bias(letter, letters, allowed_alph):
+    if letter == 'A':
+        _alph = allowed_alph[0]
+    elif letter == 'C':
+        _alph = allowed_alph[1]
+    elif letter == 'G':
+        _alph = allowed_alph[2]
+    elif letter == 'T':
+        _alph = allowed_alph[3]
+    
+    alph = np.empty(np.sum(_alph), dtype=letters.dtype)
+    i = 0
+    j = 0
+    for x in _alph:
+        if x:
+            alph[i] = letters[j]
+            i += 1
+        j += 1
+
+    return alph
+
+@numba.njit
+def make_mutation(letter, letters, allowed_alph):
+    alph = choose_mutation_bias(letter, letters, allowed_alph)
+    index = np.random.choice(np.arange(len(alph)))
+    return alph[index]
