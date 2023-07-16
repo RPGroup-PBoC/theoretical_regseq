@@ -74,6 +74,23 @@ def get_weight(seq, energy_mat, e_wt=0):
     return np.exp(-d_energy)
 
 
+def generate_emap(seq, fixed=False,
+                  fixed_value=1,
+                  max_mut_energy=0.5):
+    nt_index = {'A': 0, 'C': 1, 'G': 2, 'T': 3}
+
+    emat = np.zeros((4, len(seq)))
+    for i,nt in enumerate(seq):
+        for j in range(4):
+            if j != nt_index[nt]:
+                if fixed:
+                    emat[j, i] = fixed_value
+                else:
+                    emat[j, i] = np.random.uniform(low=0.1, high=max_mut_energy)
+    
+    return emat
+
+
 def get_dna_cnt(n_seqs):
 
     dna_cnt = np.random.exponential(1, size=n_seqs) * 10
@@ -87,31 +104,35 @@ def get_dna_cnt(n_seqs):
 
 ## computing pbound and fold change using canonical ensemble
 
-def simrep_pbound(n_NS=0,
-                  p_seq=None, r1_seq=None, r2_seq=None, a1_seq=None, a2_seq=None,
-                  n_p=0, n_r1=0, n_r2=0, n_a1=0, n_a2=0,
-                  p_emat=None, r1_emat=None, r2_emat=None, a1_emat=None, a2_emat=None, 
-                  ep_wt=0, er1_wt=0, er2_wt=0, ea1_wt=0, ea2_wt=0,
-                  e_int_r1r2=0, e_int_a1a2=0, e_int_pa1=0, e_int_pa2=0, 
-                  gate='AND'):
+def constitutive_pbound(p_seq, n_NS, n_p, p_emat, ep_wt=0):
+
+    w_p = get_weight(p_seq, p_emat, e_wt=ep_wt)
+
+    pbound = (n_p / n_NS * w_p) / (1 + n_p / n_NS * w_p)
+
+    return pbound
+
+
+def simrep_pbound(p_seq, r_seq, n_NS, n_p, n_r,
+                  p_emat, r_emat, ep_wt, er_wt):
     '''
     calculate the probability of binding for a gene with the simple repression
     regulatory architecture
     '''
 
     w_p = get_weight(p_seq, p_emat, e_wt=ep_wt)
-    w_r1 = get_weight(r1_seq, r1_emat, e_wt=er1_wt)
+    w_r = get_weight(r_seq, r_emat, e_wt=er_wt)
 
     z = np.zeros(3)
     z[0] = 1
     z[1] = n_p / n_NS * w_p
-    z[2] = n_r1 / n_NS * w_r1
+    z[2] = n_r / n_NS * w_r
 
     return z[1] / np.sum(z)
 
 
 def simrep_pbound_cp(p_seq, r_seq, p_emat, r_emat, P, R, M, N,
-                     ep_wt=0, er_wt=0, ep_NS=0, er_NS=0):
+                     ep_wt, er_wt, ep_NS, er_NS):
     '''
     calculate pbound for a promoter with simple repression regulatory
     architecture using the chemical potential approach.
@@ -153,32 +174,24 @@ def simrep_pbound_cp(p_seq, r_seq, p_emat, r_emat, P, R, M, N,
     return pbound
 
 
-def simact_pbound(n_NS=0,
-                  p_seq=None, r1_seq=None, r2_seq=None, a1_seq=None, a2_seq=None,
-                  n_p=0, n_r1=0, n_r2=0, n_a1=0, n_a2=0,
-                  p_emat=None, r1_emat=None, r2_emat=None, a1_emat=None, a2_emat=None, 
-                  ep_wt=0, er1_wt=0, er2_wt=0, ea1_wt=0, ea2_wt=0,
-                  e_int_r1r2=0, e_int_a1a2=0, e_int_pa1=0, e_int_pa2=0, 
-                  gate='AND'):
+def simact_pbound(p_seq, a_seq, n_NS, n_p, n_a, p_emat, a_emat,
+                  ep_wt, ea_wt, e_int_pa):
     
     w_p = get_weight(p_seq, p_emat, e_wt=ep_wt)
-    w_a1 = get_weight(a1_seq, a1_emat, e_wt=ea1_wt)
+    w_a = get_weight(a_seq, a_emat, e_wt=ea_wt)
 
     z = np.zeros(4)
     z[0] = 1
     z[1] = (n_p / n_NS) * w_p
-    z[2] = (n_a1 / n_NS) * w_a1
-    z[3] = z[1] * z[2] * np.exp(-e_int_pa1)
+    z[2] = (n_a / n_NS) * w_a
+    z[3] = z[1] * z[2] * np.exp(-e_int_pa)
 
     return (z[1] + z[3]) / np.sum(z)
 
 
-def doublerep_pbound(n_NS=0,
-                     p_seq=None, r1_seq=None, r2_seq=None, a1_seq=None, a2_seq=None,
-                     n_p=0, n_r1=0, n_r2=0, n_a1=0, n_a2=0,
-                     p_emat=None, r1_emat=None, r2_emat=None, a1_emat=None, a2_emat=None, 
-                     ep_wt=0, er1_wt=0, er2_wt=0, ea1_wt=0, ea2_wt=0,
-                     e_int_r1r2=0, e_int_a1a2=0, e_int_pa1=0, e_int_pa2=0, 
+def doublerep_pbound(p_seq, r1_seq, r2_seq, n_NS, n_p, n_r1, n_r2,
+                     p_emat, r1_emat, r2_emat, 
+                     ep_wt, er1_wt, er2_wt, e_int_r1r2,
                      gate='AND'):
 
     w_p = get_weight(p_seq, p_emat, e_wt=ep_wt)
@@ -193,6 +206,7 @@ def doublerep_pbound(n_NS=0,
         z[3] = n_r2 / n_NS * w_r2
         z[4] = (n_r1 / n_NS * w_r1) * (n_r2 / n_NS * w_r2) * np.exp(-e_int_r1r2)
         pbound = z[1] / np.sum(z)
+
     elif gate == 'OR':
         z = np.zeros(7)
         z[0] = 1
@@ -202,17 +216,14 @@ def doublerep_pbound(n_NS=0,
         z[4] = (n_p / n_NS * w_p) * (n_r1 / n_NS * w_r1)
         z[5] = (n_p / n_NS * w_p) * (n_r2 / n_NS * w_r2)
         z[6] = (n_r1 / n_NS * w_r1) * (n_r2 / n_NS * w_r2) * np.exp(-e_int_r1r2)
-        pbound = (z[1] + z[4] + z[5]) / z
+        pbound = (z[1] + z[4] + z[5]) / np.sum(z)
 
     return pbound
 
 
-def doubleact_pbound(n_NS=0,
-                     p_seq=None, r1_seq=None, r2_seq=None, a1_seq=None, a2_seq=None,
-                     n_p=0, n_r1=0, n_r2=0, n_a1=0, n_a2=0,
-                     p_emat=None, r1_emat=None, r2_emat=None, a1_emat=None, a2_emat=None, 
-                     ep_wt=0, er1_wt=0, er2_wt=0, ea1_wt=0, ea2_wt=0,
-                     e_int_r1r2=0, e_int_a1a2=0, e_int_pa1=0, e_int_pa2=0, 
+def doubleact_pbound(p_seq, a1_seq, a2_seq, n_NS, n_p, n_a1, n_a2,
+                     p_emat, a1_emat, a2_emat, 
+                     ep_wt, ea1_wt, ea2_wt, e_int_a1a2, e_int_pa1, e_int_pa2, 
                      gate='AND'):
 
     w_p = get_weight(p_seq, p_emat, e_wt=ep_wt)
@@ -228,7 +239,7 @@ def doubleact_pbound(n_NS=0,
         z[4] = n_p / n_NS * w_p
         z[5] = (n_p / n_NS * w_p) * (n_a1 / n_NS * w_a1) * np.exp(-e_int_pa1)
         z[6] = (n_p / n_NS * w_p) * (n_a2 / n_NS * w_a2) * np.exp(-e_int_pa2)
-        z[7] = (n_p / n_NS * w_p) * (n_a1 / n_NS * w_a1) * (n_a2 / n_NS * w_a2) * np.exp(-e_int_pa1) * np.exp(-e_int_pa2) * np.exp(-e_int_a1a2)
+        z[7] = z[5] * (n_a2 / n_NS * w_a2)  * np.exp(-e_int_pa2) * np.exp(-e_int_a1a2)
         pbound = np.sum(z[4:]) / np.sum(z)
 
     elif gate == 'OR':
@@ -240,92 +251,52 @@ def doubleact_pbound(n_NS=0,
         z[4] = n_p / n_NS * w_p
         z[5] = (n_p / n_NS * w_p) * (n_a1 / n_NS * w_a1) * np.exp(-e_int_pa1)
         z[6] = (n_p / n_NS * w_p) * (n_a2 / n_NS * w_a2) * np.exp(-e_int_pa2)
-        z[7] = (n_p / n_NS * w_p) * (n_a1 / n_NS * w_a1) * (n_a2 / n_NS * w_a2) * np.exp(-e_int_pa1) * np.exp(-e_int_pa2)
+        z[7] = z[5] * (n_a2 / n_NS * w_a2)  * np.exp(-e_int_pa2)
         pbound = np.sum(z[4:]) / np.sum(z)
 
     return pbound
 
 
-def repact_pbound(n_NS=0,
-                  p_seq=None, r1_seq=None, r2_seq=None, a1_seq=None, a2_seq=None,
-                  n_p=0, n_r1=0, n_r2=0, n_a1=0, n_a2=0,
-                  p_emat=None, r1_emat=None, r2_emat=None, a1_emat=None, a2_emat=None, 
-                  ep_wt=0, er1_wt=0, er2_wt=0, ea1_wt=0, ea2_wt=0,
-                  e_int_r1r2=0, e_int_a1a2=0, e_int_pa1=0, e_int_pa2=0, 
-                  gate='AND'):
+def repact_pbound(p_seq, r_seq, a_seq, n_NS, n_p, n_r, n_a,
+                  p_emat, r_emat, a_emat,
+                  ep_wt, er_wt, ea_wt, e_int_pa):
 
     w_p = get_weight(p_seq, p_emat, e_wt=ep_wt)
-    w_r = get_weight(r1_seq, r1_emat, e_wt=er1_wt)
-    w_a = get_weight(a1_seq, a1_emat, e_wt=ea1_wt)
+    w_r = get_weight(r_seq, r_emat, e_wt=er_wt)
+    w_a = get_weight(a_seq, a_emat, e_wt=ea_wt)
 
     z = np.zeros(5)
     z[0] = 1
     z[1] = n_p / n_NS * w_p
-    z[2] = n_r1 / n_NS * w_r
-    z[3] = n_a1 / n_NS * w_a
-    z[4] = (n_p / n_NS * w_p) * (n_a1 / n_NS * w_a) * np.exp(-e_int_pa1)
+    z[2] = n_r / n_NS * w_r
+    z[3] = n_a / n_NS * w_a
+    z[4] = (n_p / n_NS * w_p) * (n_a / n_NS * w_a) * np.exp(-e_int_pa)
     
     return (z[1] + z[4]) / np.sum(z)
 
 
 ## building synthetic datasets
 
-def sim_helper(func_pbound, mutants,
-               n_NS=0,
-               p_start=0, r1_start=0, r2_start=0, a1_start=0, a2_start=0,
-               p_end=0, r1_end=0, r2_end=0, a1_end=0, a2_end=0,
-               n_p=0, n_r1=0, n_r2=0, n_a1=0, n_a2=0, 
-               p_emat=None, r1_emat=None, r2_emat=None, a1_emat=None, a2_emat=None, 
-               ep_wt=0, er1_wt=0, er2_wt=0, ea1_wt=0, ea2_wt=0,
-               e_int_r1r2=0, e_int_a1a2=0, e_int_pa1=0, e_int_pa2=0, 
-               gate='AND'):
+def sim_helper(mutants, func_pbound, regions, *args):
 
     l_tr = []
     for mut in mutants:
         rv = {}
         rv['seq'] = mut
-        p_mut = mut[p_start:p_end].upper()
 
-        if r1_start != -1:
-            r1_mut = mut[r1_start:r1_end].upper()
-        else:
-            r1_mut = None
+        mut_seqs = []
+        for region in regions:
+            seq = mut[region[0]:region[1]].upper()
+            mut_seqs.append(seq)
 
-        if r2_start != -1:
-            r2_mut = mut[r2_start:r2_end].upper()
-        else:
-            r2_mut = None
+        rv['pbound'] = func_pbound(*mut_seqs, *args)
 
-        if a1_start != -1:
-            a1_mut = mut[a1_start:a1_end].upper()
-        else:
-            a1_mut = None
-
-        if a2_start != -1:
-            a2_mut = mut[a2_start:a2_end].upper()
-        else:
-            a2_mut = None
-
-        rv['pbound'] = func_pbound(n_NS=n_NS,
-                                   p_seq=p_mut, r1_seq=r1_mut, r2_seq=r2_mut, a1_seq=a1_mut, a2_seq=a2_mut,
-                                   n_p=n_p, n_r1=n_r1, n_r2=n_r2, n_a1=n_a1, n_a2=n_a2,
-                                   p_emat=p_emat, r1_emat=r1_emat, r2_emat=r2_emat, a1_emat=a1_emat, a2_emat=a2_emat, 
-                                   ep_wt=ep_wt, er1_wt=er1_wt, er2_wt=er2_wt, ea1_wt=ea1_wt, ea2_wt=ea2_wt,
-                                   e_int_r1r2=e_int_r1r2, e_int_a1a2=e_int_a1a2, e_int_pa1=e_int_pa1, e_int_pa2=e_int_pa2, 
-                                   gate=gate)
         l_tr.append(rv)
 
     return pd.DataFrame.from_records(l_tr)
 
 
-def sim(func_pbound, promoter_seq,
-        n_NS=0,
-        p_wtseq=None, r1_wtseq=None, r2_wtseq=None, a1_wtseq=None, a2_wtseq=None,
-        n_p=0, n_r1=0, n_r2=0, n_a1=0, n_a2=0, 
-        p_emat=None, r1_emat=None, r2_emat=None, a1_emat=None, a2_emat=None, 
-        ep_wt=0, er1_wt=0, er2_wt=0, ea1_wt=0, ea2_wt=0,
-        e_int_r1r2=0, e_int_a1a2=0, e_int_pa1=0, e_int_pa2=0, 
-        gate='AND',
+def sim(promoter_seq, func_pbound, binding_site_seqs, *args,
         num_mutants=10000,
         mutrate=0.1,
         allowed_alph=None,
@@ -336,38 +307,13 @@ def sim(func_pbound, promoter_seq,
                                        num_mutants=num_mutants,
                                        allowed_alph=allowed_alph,
                                        number_fixed=True))
-
-    p_start, p_end = find_binding_site(promoter_seq, p_wtseq)
-
-    if r1_wtseq is not None:
-        r1_start, r1_end = find_binding_site(promoter_seq, r1_wtseq)
-    else:
-        r1_start, r1_end = -1, -1
     
-    if r2_wtseq is not None:
-        r2_start, r2_end = find_binding_site(promoter_seq, r2_wtseq)
-    else:
-        r2_start, r2_end = -1, -1
-    
-    if a1_wtseq is not None:
-        a1_start, a1_end = find_binding_site(promoter_seq, a1_wtseq)
-    else:
-        a1_start, a1_end = -1, -1
+    regions = []
+    for bss in binding_site_seqs:
+        start, end = find_binding_site(promoter_seq, bss)
+        regions.append((start, end))
 
-    if a2_wtseq is not None:
-        a2_start, a2_end = find_binding_site(promoter_seq, a2_wtseq)
-    else:
-        a2_start, a2_end = -1, -1
-
-    df_sim = sim_helper(func_pbound, mutants,
-                        n_NS=n_NS,
-                        p_start=p_start, r1_start=r1_start, r2_start=r2_start, a1_start=a1_start, a2_start=a2_start,
-                        p_end=p_end, r1_end=r1_end, r2_end=r2_end, a1_end=a1_end, a2_end=a2_end,
-                        n_p=n_p, n_r1=n_r1, n_r2=n_r2, n_a1=n_a1, n_a2=n_a2, 
-                        p_emat=p_emat, r1_emat=r1_emat, r2_emat=r2_emat, a1_emat=a1_emat, a2_emat=a2_emat, 
-                        ep_wt=ep_wt, er1_wt=er1_wt, er2_wt=er2_wt, ea1_wt=ea1_wt, ea2_wt=ea2_wt,
-                        e_int_r1r2=e_int_r1r2, e_int_a1a2=e_int_a1a2, e_int_pa1=e_int_pa1, e_int_pa2=e_int_pa2, 
-                        gate=gate)
+    df_sim = sim_helper(mutants, func_pbound, regions, *args)
     
     dna_cnt = get_dna_cnt(len(df_sim))
     df_sim['ct_0'] = dna_cnt

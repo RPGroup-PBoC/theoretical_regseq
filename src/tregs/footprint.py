@@ -2,6 +2,17 @@ import datetime
 import numpy as np
 import pandas as pd
 from .utils import smoothing
+from .mpl_pboc import plotting_style
+
+import matplotlib as mpl
+import matplotlib.pyplot as plt
+from matplotlib.lines import Line2D
+from matplotlib import font_manager
+
+plt.rcParams.update({'font.size': 12})
+font_manager.fontManager.addfont('../../misc/lucida-sans-unicode.ttf')
+plotting_style()
+
 
 def match_seqs(wtseq, mut_list):
     '''
@@ -227,3 +238,62 @@ def footprint_old(df, wtseq):
                 seqlen=len(wtseq))
     
     return info_fp
+
+
+## plotting information footprint
+
+def label_binding_site(ax, start, end, max_signal, type, label):
+    shade_color = {'P': '#A9BFE3', 'R': '#E8B19D', 'A': '#DCECCB'}
+    label_color = {'P': '#738FC1', 'R': '#D56C55', 'A': '#7AA974'}
+    ax.axvspan(start, end, alpha=0.7, color=shade_color[type])
+    ax.add_patch(mpl.patches.Rectangle((start, max_signal * 1.15),
+                                       end-start,
+                                       max_signal * 0.2,
+                                       facecolor=label_color[type],
+                                       clip_on=False,
+                                       linewidth = 0))
+    ax.text(start + 0.5 * (end-start), max_signal * 1.2, label, fontsize = 10, color = 'k',
+            ha='center', va='baseline')
+    
+
+def plot_footprint(promoter, df, region_params,
+                   x_lims=None, fig_width=12, fig_height=2.5, legend_xcoord=1.2,
+                   outfile=None):
+    
+    mut_list = df['seq'].values
+    mu_data = df['norm_ct_1']
+    nbins = 2
+    upper_bound = np.mean(mu_data)
+
+    footprint = get_info_footprint(mut_list, mu_data, promoter, nbins, upper_bound,
+                                               pseudocount=10**(-6))
+    exshift_list = get_expression_shift(mut_list, mu_data.values, promoter,
+                                                        smoothed=True, windowsize=3)
+    
+    fig, ax = plt.subplots(figsize=(fig_width, fig_height))
+    ax.set_ylim(top=max(footprint)*1.15)
+
+    if x_lims is not None:
+        ax.set_xlim(x_lims[0], x_lims[1])
+
+    max_signal = max(footprint)
+    for region in region_params:
+        label_binding_site(ax, region[0], region[1], max_signal, region[2], region[3])
+
+    windowsize = 3
+    cut = int((windowsize - 1) / 2)
+    x = np.arange(-115 + cut, 45 - cut)
+    shiftcolors = [('#D56C55' if exshift > 0 else '#738FC1') for exshift in exshift_list]
+    ax.bar(x, footprint, color=shiftcolors, edgecolor=None, linewidth=0)
+    ax.set_ylabel('Information (bits)', fontsize=12)
+
+    custom_lines = [Line2D([0], [0], color='#D56C55', lw=4),
+                    Line2D([0], [0], color='#738FC1', lw=4)]
+    plt.legend(custom_lines,
+            ['Mutation\nincreases\nexpression', 'Mutation\ndecreases\nexpression'],
+            bbox_to_anchor=(legend_xcoord, 0.95), frameon=False)
+
+    plt.tight_layout()
+    if outfile is not None:
+        plt.savefig(outfile, dpi=300, bbox_inches='tight')
+    plt.show()
