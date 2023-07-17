@@ -257,13 +257,13 @@ def label_binding_site(ax, start, end, max_signal, type, label):
     
 
 def plot_footprint(promoter, df, region_params,
+                   nbins=2, up_scaling_factor=1,
                    x_lims=None, fig_width=12, fig_height=2.5, legend_xcoord=1.2,
                    outfile=None):
     
     mut_list = df['seq'].values
     mu_data = df['norm_ct_1']
-    nbins = 2
-    upper_bound = np.mean(mu_data)
+    upper_bound = up_scaling_factor * np.mean(mu_data)
 
     footprint = get_info_footprint(mut_list, mu_data, promoter, nbins, upper_bound,
                                                pseudocount=10**(-6))
