@@ -259,7 +259,7 @@ def label_binding_site(ax, start, end, max_signal, type, label):
 def plot_footprint(promoter, df, region_params,
                    nbins=2, up_scaling_factor=1,
                    x_lims=None, fig_width=12, fig_height=2.5, legend_xcoord=1.2,
-                   outfile=None):
+                   outfile=None, annotate_stn=True):
     
     mut_list = df['seq'].values
     mu_data = df['norm_ct_1']
@@ -277,8 +277,11 @@ def plot_footprint(promoter, df, region_params,
         ax.set_xlim(x_lims[0], x_lims[1])
 
     max_signal = max(footprint)
+    total_signal = 0
     for region in region_params:
         label_binding_site(ax, region[0], region[1], max_signal, region[2], region[3])
+        total_signal += np.sum(footprint[(region[0]+115):(region[1]+116)])
+    stn_ratio = total_signal / (np.sum(footprint) - total_signal)
 
     windowsize = 3
     cut = int((windowsize - 1) / 2)
@@ -286,6 +289,9 @@ def plot_footprint(promoter, df, region_params,
     shiftcolors = [('#D56C55' if exshift > 0 else '#738FC1') for exshift in exshift_list]
     ax.bar(x, footprint, color=shiftcolors, edgecolor=None, linewidth=0)
     ax.set_ylabel('Information (bits)', fontsize=12)
+
+    if annotate_stn:
+        ax.annotate('Signal-to-noise ratio = {:.2f}'.format(stn_ratio), xy=(-115, 0.9*max_signal))
 
     custom_lines = [Line2D([0], [0], color='#D56C55', lw=4),
                     Line2D([0], [0], color='#738FC1', lw=4)]
