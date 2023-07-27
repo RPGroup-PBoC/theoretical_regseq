@@ -242,17 +242,24 @@ def footprint_old(df, wtseq):
 
 ## plotting information footprint
 
-def label_binding_site(ax, start, end, max_signal, type, label):
+def label_binding_site(ax, start, end, max_signal, type, label,
+                       lifted=False):
     shade_color = {'P': '#A9BFE3', 'R': '#E8B19D', 'A': '#DCECCB'}
     label_color = {'P': '#738FC1', 'R': '#D56C55', 'A': '#7AA974'}
     ax.axvspan(start, end, alpha=0.7, color=shade_color[type])
-    ax.add_patch(mpl.patches.Rectangle((start, max_signal * 1.15),
+    if lifted:
+        y_coord = max_signal * 1.37
+        text_y_coord = max_signal * 1.42
+    else:
+        y_coord = max_signal * 1.15
+        text_y_coord = max_signal * 1.2
+    ax.add_patch(mpl.patches.Rectangle((start, y_coord),
                                        end-start,
                                        max_signal * 0.2,
                                        facecolor=label_color[type],
                                        clip_on=False,
                                        linewidth = 0))
-    ax.text(start + 0.5 * (end-start), max_signal * 1.2, label, fontsize = 10, color = 'k',
+    ax.text(start + 0.5 * (end-start), text_y_coord, label, fontsize = 10, color = 'k',
             ha='center', va='baseline')
     
 
@@ -279,7 +286,11 @@ def plot_footprint(promoter, df, region_params,
     max_signal = max(footprint)
     total_signal = 0
     for region in region_params:
-        label_binding_site(ax, region[0], region[1], max_signal, region[2], region[3])
+        if len(region)==4:
+            label_binding_site(ax, region[0], region[1], max_signal, region[2], region[3])
+        else:
+            label_binding_site(ax, region[0], region[1], max_signal, region[2], region[3],
+                           lifted=region[4])
         total_signal += np.sum(footprint[(region[0]+115):(region[1]+116)])
     stn_ratio = total_signal / (np.sum(footprint) - total_signal)
 
