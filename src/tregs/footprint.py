@@ -266,7 +266,9 @@ def label_binding_site(ax, start, end, max_signal, type, label,
 def plot_footprint(promoter, df, region_params,
                    nbins=2, up_scaling_factor=1,
                    x_lims=None, fig_width=12, fig_height=2.5, legend_xcoord=1.2,
-                   outfile=None, annotate_stn=True):
+                   max_signal=None,
+                   outfile=None, annotate_stn=True,
+                   return_fp=False):
     
     mut_list = df['seq'].values
     mu_data = df['norm_ct_1']
@@ -278,12 +280,14 @@ def plot_footprint(promoter, df, region_params,
                                                         smoothed=True, windowsize=3)
     
     fig, ax = plt.subplots(figsize=(fig_width, fig_height))
-    ax.set_ylim(top=max(footprint)*1.15)
 
     if x_lims is not None:
         ax.set_xlim(x_lims[0], x_lims[1])
 
-    max_signal = max(footprint)
+    if max_signal is None:
+        max_signal = max(footprint)
+    
+    ax.set_ylim(top=max_signal*1.15)
     total_signal = 0
     for region in region_params:
         if len(region)==4:
@@ -314,3 +318,6 @@ def plot_footprint(promoter, df, region_params,
     if outfile is not None:
         plt.savefig(outfile, dpi=300, bbox_inches='tight')
     plt.show()
+
+    if return_fp:
+        return footprint

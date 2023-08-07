@@ -306,7 +306,8 @@ def sim(promoter_seq, func_pbound, binding_site_seqs, *args,
                                        rate=mutrate,
                                        num_mutants=num_mutants,
                                        allowed_alph=allowed_alph,
-                                       number_fixed=True))
+                                       number_fixed=True,
+                                       keep_wildtype=True))
     
     regions = []
     for bss in binding_site_seqs:
