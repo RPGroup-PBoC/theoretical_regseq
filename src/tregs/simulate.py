@@ -235,7 +235,7 @@ def doubleact_pbound(p_seq, a1_seq, a2_seq, n_NS, n_p, n_a1, n_a2,
         z[0] = 1
         z[1] = n_a1 / n_NS * w_a1
         z[2] = n_a2 / n_NS * w_a2
-        z[3] = (n_a1 / n_NS * w_a1) * (n_a2 / n_NS * w_a2)
+        z[3] = (n_a1 / n_NS * w_a1) * (n_a2 / n_NS * w_a2) * np.exp(-e_int_a1a2)
         z[4] = n_p / n_NS * w_p
         z[5] = (n_p / n_NS * w_p) * (n_a1 / n_NS * w_a1) * np.exp(-e_int_pa1)
         z[6] = (n_p / n_NS * w_p) * (n_a2 / n_NS * w_a2) * np.exp(-e_int_pa2)
@@ -251,7 +251,7 @@ def doubleact_pbound(p_seq, a1_seq, a2_seq, n_NS, n_p, n_a1, n_a2,
         z[4] = n_p / n_NS * w_p
         z[5] = (n_p / n_NS * w_p) * (n_a1 / n_NS * w_a1) * np.exp(-e_int_pa1)
         z[6] = (n_p / n_NS * w_p) * (n_a2 / n_NS * w_a2) * np.exp(-e_int_pa2)
-        z[7] = z[5] * (n_a2 / n_NS * w_a2)  * np.exp(-e_int_pa2)
+        z[7] = z[5] * (n_a2 / n_NS * w_a2) * np.exp(-e_int_pa2)
         pbound = np.sum(z[4:]) / np.sum(z)
 
     return pbound
