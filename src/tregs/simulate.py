@@ -198,7 +198,9 @@ def doublerep_pbound(p_seq, r1_seq, r2_seq, n_NS, n_p, n_r1, n_r2,
     w_r1 = get_weight(r1_seq, r1_emat, e_wt=er1_wt)
     w_r2 = get_weight(r2_seq, r2_emat, e_wt=er2_wt)
 
-    if gate == 'AND':
+    # OR gate: only need one repressor to be present for repression to occur,
+    # i.e. no expression if either repressor is bound
+    if gate == 'OR':
         z = np.zeros(5)
         z[0] = 1
         z[1] = n_p / n_NS * w_p
@@ -207,7 +209,8 @@ def doublerep_pbound(p_seq, r1_seq, r2_seq, n_NS, n_p, n_r1, n_r2,
         z[4] = (n_r1 / n_NS * w_r1) * (n_r2 / n_NS * w_r2) * np.exp(-e_int_r1r2)
         pbound = z[1] / np.sum(z)
 
-    elif gate == 'OR':
+    # AND gate: need both repressors to be present for repression to occur
+    elif gate == 'AND':
         z = np.zeros(7)
         z[0] = 1
         z[1] = n_p / n_NS * w_p
@@ -313,6 +316,60 @@ def sim(promoter_seq, func_pbound, binding_site_seqs, *args,
     for bss in binding_site_seqs:
         start, end = find_binding_site(promoter_seq, bss)
         regions.append((start, end))
+
+    df_sim = sim_helper(mutants, func_pbound, regions, *args)
+    
+    dna_cnt = get_dna_cnt(len(df_sim))
+    df_sim['ct_0'] = dna_cnt
+    df_sim = df_sim[df_sim.ct_0 != 0.0]
+
+    df_sim['ct_1'] = 0.1 + df_sim['ct_0'] * df_sim['pbound'] * scaling_factor
+    df_sim['ct_1'] = df_sim['ct_1'].astype(int)
+
+    df_sim['ct_0'] = df_sim['ct_0'].astype(float)
+    df_sim['ct_1'] = df_sim['ct_1'].astype(float)
+    df_sim['norm_ct_1'] = df_sim['ct_1'] / df_sim['ct_0']
+
+    return df_sim
+
+
+## library with mutants with point mutations
+
+def get_binding_site_indices(regions):
+    indices = []
+    for region in regions:
+        for i in range(region[0], region[1]):
+            indices.append(i)
+    return indices
+
+def get_point_mutants(wtseq, regions):
+    mutants = []
+    mutants.append(wtseq)
+    nts = ['A', 'T', 'C', 'G']
+    rindices = get_binding_site_indices(regions)
+    for i, wt_nt in enumerate(wtseq):
+        if i in rindices:
+            for nt in nts:
+                if nt != wt_nt:
+                    mut = wtseq[:i] + nt + wtseq[(i + 1):]
+                    mutants.append(mut)
+    return mutants
+
+def sim_pointmut(promoter_seq, func_pbound, binding_site_seqs,
+                 TF_seqs, *args,
+                 scaling_factor=100):
+    
+    regions = []
+    for bss in binding_site_seqs:
+        start, end = find_binding_site(promoter_seq, bss)
+        regions.append((start, end))
+    
+    TF_regions = []
+    for bss in TF_seqs:
+        start, end = find_binding_site(promoter_seq, bss)
+        TF_regions.append((start, end))
+    
+    mutants = get_point_mutants(promoter_seq, TF_regions)
 
     df_sim = sim_helper(mutants, func_pbound, regions, *args)
     
