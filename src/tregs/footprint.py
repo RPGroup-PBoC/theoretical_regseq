@@ -153,7 +153,7 @@ def get_info_footprint(mut_list, mu_data, wtseq,
 
 
 def get_expression_shift(mut_list, mu_data, wtseq,
-                         len_promoter=160, smoothed=True, windowsize=3):
+                         len_promoter=160, smoothed=False, windowsize=3):
     n_seqs = len(mu_data)
     avg_mu = np.mean(mu_data)
     all_mutarr = match_seqs(wtseq, mut_list)
@@ -295,8 +295,8 @@ def plot_footprint(promoter, df, region_params,
         else:
             label_binding_site(ax, region[0], region[1], max_signal, region[2], region[3],
                            lifted=region[4])
-        total_signal += np.sum(footprint[(region[0]+115):(region[1]+116)])
-    stn_ratio = total_signal / (np.sum(footprint) - total_signal)
+        total_signal += np.sum(footprint[(region[0]+115):(region[1]+116)]) / (region[1] - region[0] + 1)
+    stn_ratio = total_signal / (np.mean(footprint) - total_signal)
 
     windowsize = 3
     cut = int((windowsize - 1) / 2)
