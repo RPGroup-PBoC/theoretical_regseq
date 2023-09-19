@@ -295,8 +295,11 @@ def plot_footprint(promoter, df, region_params,
         else:
             label_binding_site(ax, region[0], region[1], max_signal, region[2], region[3],
                            lifted=region[4])
-        total_signal += np.sum(footprint[(region[0]+115):(region[1]+116)]) / (region[1] - region[0] + 1)
-    stn_ratio = total_signal / (np.mean(footprint) - total_signal)
+        total_signal += np.sum(footprint[(region[0]+115):(region[1]+116)])
+    total_noise = np.sum(footprint) - total_signal
+    mean_signal = total_signal / (region[1] - region[0] + 1)
+    mean_noise = total_noise / (160 - (region[1] - region[0] + 1))
+    stn_ratio = mean_signal / mean_noise
 
     windowsize = 3
     cut = int((windowsize - 1) / 2)
