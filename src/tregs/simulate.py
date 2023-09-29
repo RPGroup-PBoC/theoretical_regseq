@@ -299,13 +299,53 @@ def sim_helper(mutants, func_pbound, regions, *args):
     return pd.DataFrame.from_records(l_tr)
 
 
+def biased_mutants(promoter_seq,
+                   num_mutants=10000,
+                   mutrate=0.1,
+                   allowed_alph=None):
+    indices = []
+    subseq = ''
+    for i, nt in enumerate(promoter_seq):
+        if nt not in ['A', 'T']:
+            indices.append(i)
+            subseq += nt
+
+    _mutants = np.unique(mutations_rand(subseq,
+                                        rate=mutrate * len(promoter_seq) / len(subseq),
+                                        num_mutants=num_mutants,
+                                        allowed_alph=allowed_alph,
+                                        number_fixed=True,
+                                        keep_wildtype=True))
+
+    mutants = []
+    for mutant in _mutants:
+        mutseq = ''
+        mut_index = 0
+        for j in range(160):
+            if j not in indices:
+                mutseq += promoter_seq[j]
+            else:
+                mutseq += mutant[mut_index]
+                mut_index += 1
+        mutants.append(mutseq)
+    
+    return mutants
+
+
 def sim(promoter_seq, func_pbound, binding_site_seqs, *args,
-        num_mutants=10000,
+        num_mutants=5000,
         mutrate=0.1,
+        biased=False,
         allowed_alph=None,
         scaling_factor=100):
     
-    mutants = np.unique(mutations_rand(promoter_seq,
+    if biased:
+        mutants = biased_mutants(promoter_seq,
+                                 mutrate=mutrate,
+                                 num_mutants=num_mutants,
+                                 allowed_alph=allowed_alph)
+    else:
+        mutants = np.unique(mutations_rand(promoter_seq,
                                        rate=mutrate,
                                        num_mutants=num_mutants,
                                        allowed_alph=allowed_alph,

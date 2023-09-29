@@ -36,7 +36,7 @@ def match_seqs(wtseq, mut_list):
     return wt_arr != mut_arr
 
 
-def get_p_b(all_mutarr, n_seqs):
+def get_p_b(all_mutarr, n_seqs, pseudocount=0):
     '''
     compute the probability that each base position is mutated
 
@@ -53,7 +53,7 @@ def get_p_b(all_mutarr, n_seqs):
     #tot_mut_cnt = np.sum(all_mutarr * mu_data.values[:, np.newaxis], axis=0)
     #p_mut = tot_mut_cnt / np.sum(mu_data)
     tot_mut_cnt = np.sum(all_mutarr, axis=0)
-    p_mut = tot_mut_cnt / n_seqs
+    p_mut = (tot_mut_cnt + pseudocount) / n_seqs
 
     return np.asarray([1 - p_mut, p_mut]).T
 
@@ -136,7 +136,7 @@ def get_info_footprint(mut_list, mu_data, wtseq,
     #print('start time: {}'.format(datetime.datetime.now()))
     all_mutarr = match_seqs(wtseq, mut_list)
     #print('finished match_seqs: {}'.format(datetime.datetime.now()))
-    list_p_b = get_p_b(all_mutarr, n_seqs)
+    list_p_b = get_p_b(all_mutarr, n_seqs, pseudocount=pseudocount)
     #print('finished calculating p_b: {}'.format(datetime.datetime.now()))
     mu_bins, bin_cnt = bin_expression_levels(mu_data, nbins, upper_bound)
     p_mu = get_p_mu(bin_cnt, n_seqs)
@@ -144,6 +144,7 @@ def get_info_footprint(mut_list, mu_data, wtseq,
     list_joint_p = get_joint_p(all_mutarr, mu_bins, nbins,
                                pseudocount=pseudocount, len_promoter=len_promoter)
     #print('finished calculating joint probability distribution: {}'.format(datetime.datetime.now()))
+
     footprint = MI(list_p_b, p_mu, list_joint_p)
     #print('finished calculating mutual information: {}'.format(datetime.datetime.now()))
     if smoothed:
@@ -153,7 +154,7 @@ def get_info_footprint(mut_list, mu_data, wtseq,
 
 
 def get_expression_shift(mut_list, mu_data, wtseq,
-                         len_promoter=160, smoothed=False, windowsize=3):
+                         len_promoter=160):
     n_seqs = len(mu_data)
     avg_mu = np.mean(mu_data)
     all_mutarr = match_seqs(wtseq, mut_list)
@@ -166,8 +167,8 @@ def get_expression_shift(mut_list, mu_data, wtseq,
         ex_shift /= n_seqs
         exshift_list.append(ex_shift)
     
-    if smoothed:
-        exshift_list = smoothing(exshift_list, windowsize=windowsize)
+    #if smoothed:
+    #    exshift_list = smoothing(exshift_list, windowsize=windowsize)
     
     return exshift_list
 
@@ -268,16 +269,17 @@ def plot_footprint(promoter, df, region_params,
                    x_lims=None, fig_width=12, fig_height=2.5, legend_xcoord=1.2,
                    max_signal=None,
                    outfile=None, annotate_stn=True,
-                   return_fp=False):
+                   return_fp=False,
+                   smoothed=True, windowsize=3,):
     
     mut_list = df['seq'].values
     mu_data = df['norm_ct_1']
     upper_bound = up_scaling_factor * np.mean(mu_data)
 
     footprint = get_info_footprint(mut_list, mu_data, promoter, nbins, upper_bound,
-                                               pseudocount=10**(-6))
-    exshift_list = get_expression_shift(mut_list, mu_data.values, promoter,
-                                                        smoothed=True, windowsize=3)
+                                               pseudocount=10**(-6),
+                                               smoothed=smoothed, windowsize=windowsize)
+    exshift_list = get_expression_shift(mut_list, mu_data.values, promoter)
     
     fig, ax = plt.subplots(figsize=(fig_width, fig_height))
 
@@ -301,9 +303,11 @@ def plot_footprint(promoter, df, region_params,
     mean_noise = total_noise / (160 - (region[1] - region[0] + 1))
     stn_ratio = mean_signal / mean_noise
 
-    windowsize = 3
-    cut = int((windowsize - 1) / 2)
-    x = np.arange(-115 + cut, 45 - cut)
+    if smoothed:
+        cut = int((windowsize - 1) / 2)
+        x = np.arange(-115 + cut, 45 - cut)
+    else:
+        x = np.arange(-115, 45)
     shiftcolors = [('#D56C55' if exshift > 0 else '#738FC1') for exshift in exshift_list]
     ax.bar(x, footprint, color=shiftcolors, edgecolor=None, linewidth=0)
     ax.set_ylabel('Information (bits)', fontsize=12)
