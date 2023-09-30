@@ -373,6 +373,31 @@ def sim(promoter_seq, func_pbound, binding_site_seqs, *args,
     return df_sim
 
 
+def sim_preset_library(promoter_seq, func_pbound, binding_site_seqs, *args,
+                       mutants,
+                       scaling_factor=100):
+    
+    regions = []
+    for bss in binding_site_seqs:
+        start, end = find_binding_site(promoter_seq, bss)
+        regions.append((start, end))
+
+    df_sim = sim_helper(mutants, func_pbound, regions, *args)
+    
+    dna_cnt = get_dna_cnt(len(df_sim))
+    df_sim['ct_0'] = dna_cnt
+    df_sim = df_sim[df_sim.ct_0 != 0.0]
+
+    df_sim['ct_1'] = 0.1 + df_sim['ct_0'] * df_sim['pbound'] * scaling_factor
+    df_sim['ct_1'] = df_sim['ct_1'].astype(int)
+
+    df_sim['ct_0'] = df_sim['ct_0'].astype(float)
+    df_sim['ct_1'] = df_sim['ct_1'].astype(float)
+    df_sim['norm_ct_1'] = df_sim['ct_1'] / df_sim['ct_0']
+
+    return df_sim
+
+
 ## library with mutants with point mutations
 
 def get_binding_site_indices(regions):

@@ -168,7 +168,7 @@ def get_expression_shift(mut_list, mu_data, wtseq,
         exshift_list.append(ex_shift)
     
     #if smoothed:
-    #    exshift_list = smoothing(exshift_list, windowsize=windowsize)
+    exshift_list = smoothing(exshift_list, windowsize=3)
     
     return exshift_list
 
