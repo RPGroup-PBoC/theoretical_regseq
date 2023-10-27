@@ -59,18 +59,33 @@ def get_p_b(all_mutarr, n_seqs, pseudocount=0):
 
 
 def bin_expression_levels(mu_data, nbins, upper_bound):
-    #bins = np.linspace(0, upper_bound, nbins, dtype=int).tolist()
-    bins = np.linspace(0, upper_bound, nbins).tolist()
-    bins.append(int(max(mu_data) + 1))
-
-    binned = pd.cut(mu_data, bins=bins,
-                    labels=np.arange(nbins),
-                    include_lowest=True, right=False)
     
-    mu_bins = binned.values
-    bin_cnt = binned.value_counts(sort=False).values
+    #bins = np.linspace(0, upper_bound, nbins).tolist()
+    #bins.append(int(max(mu_data) + 1))
 
-    return mu_bins, bin_cnt
+    #binned = pd.cut(mu_data, bins=bins,
+    #                labels=np.arange(nbins),
+    #                include_lowest=True, right=False)
+    
+    #mu_bins = binned.values
+    #bin_cnt = binned.value_counts(sort=False).values
+
+
+    df_tmp = pd.DataFrame(mu_data)
+    df_tmp.sort_values(by='norm_ct_1', ascending=True, inplace = True)
+
+    splits = np.array_split(df_tmp, nbins)
+
+    for i in range(len(splits)):
+        splits[i]['group'] = i + 1
+
+    df_tmp = pd.concat(splits)
+    df_tmp.sort_index(inplace=True)
+    mu_bins = df_tmp['group'].values - 1
+
+    bin_cnt = df_tmp.groupby(['group']).size()
+
+    return mu_bins, np.asarray(bin_cnt)
 
 
 def get_p_mu(bin_cnt, n_seqs):
@@ -310,7 +325,10 @@ def plot_footprint(promoter, df, region_params,
         x = np.arange(-115, 45)
     shiftcolors = [('#D56C55' if exshift > 0 else '#738FC1') for exshift in exshift_list]
     ax.bar(x, footprint, color=shiftcolors, edgecolor=None, linewidth=0)
-    ax.set_ylabel('Information (bits)', fontsize=12)
+    ax.set_ylabel('Information (bits)', fontsize=16)
+
+    ax.tick_params(axis='x', labelsize=14)
+    ax.tick_params(axis='y', labelsize=14)
 
     if annotate_stn:
         ax.annotate('Signal-to-noise ratio = {:.2f}'.format(stn_ratio), xy=(-115, 0.9*max_signal))
