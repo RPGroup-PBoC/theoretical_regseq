@@ -60,30 +60,30 @@ def get_p_b(all_mutarr, n_seqs, pseudocount=0):
 
 def bin_expression_levels(mu_data, nbins, upper_bound):
     
-    #bins = np.linspace(0, upper_bound, nbins).tolist()
-    #bins.append(int(max(mu_data) + 1))
+    bins = np.linspace(0, upper_bound, nbins).tolist()
+    bins.append(int(max(mu_data) + 1))
 
-    #binned = pd.cut(mu_data, bins=bins,
-    #                labels=np.arange(nbins),
-    #                include_lowest=True, right=False)
+    binned = pd.cut(mu_data, bins=bins,
+                    labels=np.arange(nbins),
+                    include_lowest=True, right=False)
+    #binned = pd.qcut(mu_data, 2,
+    #                labels=np.arange(nbins))
     
-    #mu_bins = binned.values
-    #bin_cnt = binned.value_counts(sort=False).values
+    mu_bins = binned.values
+    bin_cnt = binned.value_counts(sort=False).values
 
 
-    df_tmp = pd.DataFrame(mu_data)
-    df_tmp.sort_values(by='norm_ct_1', ascending=True, inplace = True)
+    #df_tmp = pd.DataFrame(mu_data)
+    #df_tmp.sort_values(by='norm_ct_1', ascending=True, inplace = True)
 
-    splits = np.array_split(df_tmp, nbins)
+    #splits = np.array_split(df_tmp, nbins)
+    #for i in range(len(splits)):
+    #    splits[i]['group'] = i + 1
+    #df_tmp = pd.concat(splits)
+    #df_tmp.sort_index(inplace=True)
+    #mu_bins = df_tmp['group'].values - 1
 
-    for i in range(len(splits)):
-        splits[i]['group'] = i + 1
-
-    df_tmp = pd.concat(splits)
-    df_tmp.sort_index(inplace=True)
-    mu_bins = df_tmp['group'].values - 1
-
-    bin_cnt = df_tmp.groupby(['group']).size()
+    #bin_cnt = df_tmp.groupby(['group']).size()
 
     return mu_bins, np.asarray(bin_cnt)
 
@@ -275,13 +275,13 @@ def label_binding_site(ax, start, end, max_signal, type, label,
                                        facecolor=label_color[type],
                                        clip_on=False,
                                        linewidth = 0))
-    ax.text(start + 0.5 * (end-start), text_y_coord, label, fontsize = 10, color = 'k',
+    ax.text(start + 0.5 * (end-start), text_y_coord, label, fontsize = 12, color = 'k',
             ha='center', va='baseline')
     
 
 def plot_footprint(promoter, df, region_params,
                    nbins=2, up_scaling_factor=1,
-                   x_lims=None, fig_width=12, fig_height=2.5, legend_xcoord=1.2,
+                   x_lims=None, fig_width=10, fig_height=2.9, legend_xcoord=1.2,
                    max_signal=None,
                    outfile=None, annotate_stn=True,
                    return_fp=False,
@@ -326,6 +326,7 @@ def plot_footprint(promoter, df, region_params,
     shiftcolors = [('#D56C55' if exshift > 0 else '#738FC1') for exshift in exshift_list]
     ax.bar(x, footprint, color=shiftcolors, edgecolor=None, linewidth=0)
     ax.set_ylabel('Information (bits)', fontsize=16)
+    ax.set_xlabel('Position relative to TSS', fontsize=16)
 
     ax.tick_params(axis='x', labelsize=14)
     ax.tick_params(axis='y', labelsize=14)
@@ -333,11 +334,11 @@ def plot_footprint(promoter, df, region_params,
     if annotate_stn:
         ax.annotate('Signal-to-noise ratio = {:.2f}'.format(stn_ratio), xy=(-115, 0.9*max_signal))
 
-    custom_lines = [Line2D([0], [0], color='#D56C55', lw=4),
-                    Line2D([0], [0], color='#738FC1', lw=4)]
-    plt.legend(custom_lines,
-            ['Mutation\nincreases\nexpression', 'Mutation\ndecreases\nexpression'],
-            bbox_to_anchor=(legend_xcoord, 0.95), frameon=False)
+    #custom_lines = [Line2D([0], [0], color='#D56C55', lw=4),
+    #                Line2D([0], [0], color='#738FC1', lw=4)]
+    #plt.legend(custom_lines,
+    #        ['Mutation\nincreases\nexpression', 'Mutation\ndecreases\nexpression'],
+    #        bbox_to_anchor=(legend_xcoord, 1), frameon=False)
 
     plt.tight_layout()
     if outfile is not None:
