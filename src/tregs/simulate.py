@@ -438,8 +438,8 @@ def sim_pointmut(promoter_seq, func_pbound, binding_site_seqs,
 
     df_sim = sim_helper(mutants, func_pbound, regions, *args)
     
-    dna_cnt = get_dna_cnt(len(df_sim))
-    df_sim['ct_0'] = dna_cnt
+    #dna_cnt = get_dna_cnt(len(df_sim))
+    df_sim['ct_0'] = np.ones(len(df_sim))
     df_sim = df_sim[df_sim.ct_0 != 0.0]
 
     df_sim['ct_1'] = 0.1 + df_sim['ct_0'] * df_sim['pbound'] * scaling_factor
