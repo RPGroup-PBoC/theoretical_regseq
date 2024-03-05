@@ -10,7 +10,7 @@ from matplotlib.lines import Line2D
 from matplotlib import font_manager
 
 plt.rcParams.update({'font.size': 12})
-font_manager.fontManager.addfont('../../misc/lucida-sans-unicode.ttf')
+#font_manager.fontManager.addfont('/Users/rosalindpan/rpgroup/projects/theoretical-regseq/misc/lucida-sans-unicode.ttf')
 plotting_style()
 
 
