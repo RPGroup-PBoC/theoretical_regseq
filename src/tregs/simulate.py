@@ -45,6 +45,7 @@ def get_d_energy(seq, energy_mat, e_wt=0):
     '''
 
     indices = {'A': 0, 'C': 1, 'G': 2, 'T': 3}
+
     if energy_mat.shape[0] == 4:
         energy_mat = energy_mat.T
     d_energy = 0
@@ -77,6 +78,21 @@ def get_weight(seq, energy_mat, e_wt=0):
 def generate_emap(seq, fixed=False,
                   fixed_value=1,
                   max_mut_energy=0.5):
+    
+    '''
+    Generates an energy matrix for a binding site.
+    Mutations can either have fixed energy values or randomly assigned energies.
+
+    Args:
+        seq (str): The reference binding site sequence for which the energy matrix is generated.
+        fixed (bool): If True, uses a fixed value for mutations; otherwise, values are random.
+        fixed_value (float): The energy value used for all mutations if fixed is True.
+        max_mut_energy (float): The maximum energy for mutations if fixed is False.
+
+    Returns:
+        np.ndarray: The energy matrix for the sequence.
+    '''
+
     nt_index = {'A': 0, 'C': 1, 'G': 2, 'T': 3}
 
     emat = np.zeros((4, len(seq)))
@@ -93,18 +109,42 @@ def generate_emap(seq, fixed=False,
 
 def get_dna_cnt(n_seqs):
 
+    '''
+    Generates an array of DNA copy numbers for a given number of sequences. Each copy number is drawn from an exponential distribution, scaled, and then rounded up to the nearest integer.
+
+    Args:
+        n_seqs (int): The number of DNA sequences for which to generate copy numbers.
+
+    Returns:
+        np.array: An array containing the rounded-up copy numbers for each DNA sequence.
+    '''
+
     dna_cnt = np.random.exponential(1, size=n_seqs) * 10
 
     dna_cnt_up = []
     for cnt in dna_cnt:
         dna_cnt_up.append(math.ceil(cnt))
 
-    return dna_cnt
+    return np.array(dna_cnt_up)
 
 
 ## computing pbound and fold change using canonical ensemble
 
 def constitutive_pbound(p_seq, n_NS, n_p, p_emat, ep_wt=0):
+
+    '''
+    Calculate the probability of RNAP being bound for a constitutively transcribed promoter.
+    
+    Args:
+        p_seq (str): Sequence of RNAP binding site.
+        n_NS (float): Number of non-specific binding sites.
+        n_p (float): Copy number of RNAP.
+        p_emat (np.ndarray): Energy matrix for the RNAP.
+        ep_wt (float, optional): Binding energy of the RNAP at the wild-type binding site. Defaults to 0.
+
+    Returns:
+        float: Probability of RNAP being bound.
+    '''
 
     w_p = get_weight(p_seq, p_emat, e_wt=ep_wt)
 
@@ -115,11 +155,25 @@ def constitutive_pbound(p_seq, n_NS, n_p, p_emat, ep_wt=0):
 
 def simrep_pbound(p_seq, r_seq, n_NS, n_p, n_r,
                   p_emat, r_emat, ep_wt, er_wt):
+    
     '''
-    calculate the probability of binding for a gene with the simple repression
-    regulatory architecture
-    '''
+    Calculate the probability of RNAP being bound for a promoter with simple repression regulatory architecture.
 
+    Args:
+        p_seq (str): Sequence of the RNAP binding site.
+        r_seq (str): Sequence of the repressor binding site.
+        n_NS (float): Number of non-specific binding sites.
+        n_p (float): Copy number of RNAP.
+        n_r (float): Copy number of repressor.
+        p_emat (np.ndarray): Energy matrix for the RNAP.
+        r_emat (np.ndarray): Energy matrix for the repressor.
+        ep_wt (float): Binding energy of RNAP at the wild-type binding site.
+        er_wt (float): Binding energy of repressor at the wild-type binding site.
+
+    Returns:
+        float: Probability of RNAP being bound in the presence of a repressor.
+    '''
+     
     w_p = get_weight(p_seq, p_emat, e_wt=ep_wt)
     w_r = get_weight(r_seq, r_emat, e_wt=er_wt)
 
@@ -146,13 +200,13 @@ def simrep_pbound_cp(p_seq, r_seq, p_emat, r_emat, P, R, M, N,
         R (int): number of repressors.
         M (int): number of specific binding sites (i.e. copy number of the promoter).
         N (int): number of non-specific binding sites
-        ep_wt (int, optional): binding energy to the wild type RNAP binding
+        ep_wt (int): binding energy to the wild type RNAP binding
             site. Defaults to 0.
-        er_wt (int, optional): binding energy to the wild type repressor binding
+        er_wt (int): binding energy to the wild type repressor binding
             site. Defaults to 0.
-        ep_NS (int, optional): RNAP binding affinity at the non-specific
+        ep_NS (int): RNAP binding affinity at the non-specific
             binding sites (in kBT units). Defaults to 0.
-        er_NS (int, optional): repressor binding affinity at the non-specific
+        er_NS (int): repressor binding affinity at the non-specific
             binding sites (in kBT units) Defaults to 0.
 
     Returns:
@@ -176,7 +230,25 @@ def simrep_pbound_cp(p_seq, r_seq, p_emat, r_emat, P, R, M, N,
 
 def simact_pbound(p_seq, a_seq, n_NS, n_p, n_a, p_emat, a_emat,
                   ep_wt, ea_wt, e_int_pa):
-    
+    '''
+    Calculate the probability of RNAP being bound for a promoter with simple activation regulatory architecture.
+
+    Args:
+        p_seq (str): Sequence of the RNAP binding site.
+        a_seq (str): Sequence of the activator binding site.
+        n_NS (float): Number of non-specific binding sites.
+        n_p (float): Copy number of RNAP.
+        n_a (float): Copy number of activator.
+        p_emat (np.ndarray): Energy matrix for RNAP.
+        a_emat (np.ndarray): Energy matrix for activator.
+        ep_wt (float): Energy of RNAP at the wild-type binding site.
+        ea_wt (float): Energy of activator at the wild-type binding site.
+        e_int_pa (float): Interaction energy between RNAP and activator.
+
+    Returns:
+        float: Probability of RNAP being bound.
+    '''
+
     w_p = get_weight(p_seq, p_emat, e_wt=ep_wt)
     w_a = get_weight(a_seq, a_emat, e_wt=ea_wt)
 
@@ -193,6 +265,25 @@ def doublerep_pbound(p_seq, r1_seq, r2_seq, n_NS, n_p, n_r1, n_r2,
                      p_emat, r1_emat, r2_emat, 
                      ep_wt, er1_wt, er2_wt, e_int_r1r2,
                      gate='AND'):
+    '''
+    Calculate the probability of RNAP being bound for a promoter regulated by two repressors, configured either in an AND or OR logic gate.
+
+    Args:
+        p_seq (str): Sequence of the RNAP binding site.
+        r1_seq (str), r2_seq (str): Sequences of the two repressor binding sites.
+        n_NS (float): Number of non-specific binding sites.
+        n_p (float): Copy number of RNAP.
+        n_r1 (float), n_r2 (float): Copy numbers of the two repressors.
+        p_emat (np.ndarray): Energy matrix for RNAP.
+        r1_emat (np.ndarray), r2_emat (np.ndarray): Energy matrices for the repressors.
+        ep_wt (float): Energy of RNAP at the wild-type binding site.
+        er1_wt (float), er2_wt (float): Energies of the wild-type repressor binding sites.
+        e_int_r1r2 (float): Interaction energy between the two repressors.
+        gate (str, optional): Logic gate configuration, 'AND' or 'OR'. Defaults to 'AND'.
+
+    Returns:
+        float: Probability of RNAP being bound considering the configuration of two repressors.
+    '''
 
     w_p = get_weight(p_seq, p_emat, e_wt=ep_wt)
     w_r1 = get_weight(r1_seq, r1_emat, e_wt=er1_wt)
@@ -228,6 +319,25 @@ def doubleact_pbound(p_seq, a1_seq, a2_seq, n_NS, n_p, n_a1, n_a2,
                      p_emat, a1_emat, a2_emat, 
                      ep_wt, ea1_wt, ea2_wt, e_int_a1a2, e_int_pa1, e_int_pa2, 
                      gate='AND'):
+    '''
+    Calculate the probability of RNAP being bound for a promoter regulated by two activators, configured either in an AND or OR logic gate.
+
+    Args:
+        p_seq (str): Sequence of the RNAP binding site.
+        a1_seq (str), a2_seq (str): Sequences of the two activator binding sites.
+        n_NS (float): Number of non-specific binding sites.
+        n_p (float): Copy number of RNAP.
+        n_a1 (float), n_a2 (float): Copy numbers of the two activators.
+        p_emat (np.ndarray): Energy matrix for RNAP.
+        a1_emat (np.ndarray), a2_emat (np.ndarray): Energy matrices for the activators.
+        ep_wt (float): Energy of RNAP at the wild-type binding site.
+        ea1_wt (float), ea2_wt (float): Energies of the wild-type activator binding sites.
+        e_int_a1a2 (float), e_int_pa1 (float), e_int_pa2 (float): Interaction energies between activators and between each activator and RNAP.
+        gate (str, optional): Logic gate configuration, 'AND' or 'OR'. Defaults to 'AND'.
+
+    Returns:
+        float: Probability of RNAP being bound considering the configuration of two activators.
+    '''
 
     w_p = get_weight(p_seq, p_emat, e_wt=ep_wt)
     w_a1 = get_weight(a1_seq, a1_emat, e_wt=ea1_wt)
@@ -263,6 +373,29 @@ def doubleact_pbound(p_seq, a1_seq, a2_seq, n_NS, n_p, n_a1, n_a2,
 def repact_pbound(p_seq, r_seq, a_seq, n_NS, n_p, n_r, n_a,
                   p_emat, r_emat, a_emat,
                   ep_wt, er_wt, ea_wt, e_int_pa):
+    
+    '''
+    Calculate the probability of RNAP being bound for a promoter regulated by both a repressor and an activator.
+
+    Args:
+        p_seq (str): Sequence of the RNAP binding site.
+        r_seq (str): Sequence of the repressor binding site.
+        a_seq (str): Sequence of the activator binding site.
+        n_NS (float): Number of non-specific binding sites.
+        n_p (float): Copy number of RNAP.
+        n_r (float): Copy number of repressor.
+        n_a (float): Copy number of activator.
+        p_emat (np.ndarray): Energy matrix for RNAP.
+        r_emat (np.ndarray): Energy matrix for repressor.
+        a_emat (np.ndarray): Energy matrix for activator.
+        ep_wt (float): Energy of RNAP at the wild-type binding site.
+        er_wt (float): Energy of repressor at the wild-type binding site.
+        ea_wt (float): Energy of activator at the wild-type binding site.
+        e_int_pa (float): Interaction energy between RNAP and activator.
+
+    Returns:
+        float: Probability of RNAP being bound considering the effects of both repressor and activator.
+    '''
 
     w_p = get_weight(p_seq, p_emat, e_wt=ep_wt)
     w_r = get_weight(r_seq, r_emat, e_wt=er_wt)
