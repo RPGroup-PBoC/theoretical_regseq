@@ -59,6 +59,10 @@ def find_binding_site(region, binding_site):
     '''    
 
     start = region.find(binding_site)
+
+    if start == -1:
+        return start, -1  # Return -1 for both start and end if not found
+    
     end = start + len(binding_site)
 
     return start, end

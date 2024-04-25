@@ -200,13 +200,13 @@ def simrep_pbound_cp(p_seq, r_seq, p_emat, r_emat, P, R, M, N,
         R (int): number of repressors.
         M (int): number of specific binding sites (i.e. copy number of the promoter).
         N (int): number of non-specific binding sites
-        ep_wt (int): binding energy to the wild type RNAP binding
+        ep_wt (float): binding energy to the wild type RNAP binding
             site. Defaults to 0.
-        er_wt (int): binding energy to the wild type repressor binding
+        er_wt (float): binding energy to the wild type repressor binding
             site. Defaults to 0.
-        ep_NS (int): RNAP binding affinity at the non-specific
+        ep_NS (float): RNAP binding affinity at the non-specific
             binding sites (in kBT units). Defaults to 0.
-        er_NS (int): repressor binding affinity at the non-specific
+        er_NS (float): repressor binding affinity at the non-specific
             binding sites (in kBT units) Defaults to 0.
 
     Returns:
@@ -415,13 +415,33 @@ def repact_pbound(p_seq, r_seq, a_seq, n_NS, n_p, n_r, n_a,
 
 def sim_helper(mutants, func_pbound, regions, *args):
 
+    """
+    Helper function to simulate binding probabilities for given mutants and binding regions.
+    
+    This function iterates over a list of mutant sequences, applies a provided probability function to 
+    subsets of these sequences defined by specified regions, and collects the results in a DataFrame.
+
+    Args:
+        mutants (list): List of mutant DNA sequences to simulate.
+        func_pbound (function): Function to calculate binding probabilities.
+        regions (list of tuples): List of tuples where each tuple contains start and end indices 
+                                  defining regions in the mutants to apply func_pbound.
+        *args: Additional arguments to pass to func_pbound.
+
+    Returns:
+        pd.DataFrame: A DataFrame with columns for mutant sequences and their calculated binding probabilities.
+    """
+
     l_tr = []
     for mut in mutants:
         rv = {}
-        rv['seq'] = mut
+        rv['seq'] = mut.upper()
 
         mut_seqs = []
         for region in regions:
+
+            assert region[1] <= len(mut), f"Region {region} out of bounds for sequence of length {len(mut)}"
+
             seq = mut[region[0]:region[1]].upper()
             mut_seqs.append(seq)
 
@@ -436,12 +456,31 @@ def biased_mutants(promoter_seq,
                    num_mutants=10000,
                    mutrate=0.1,
                    allowed_alph=None):
+    """
+    Generate mutants of a given promoter sequence with a bias towards non-AT nucleotides.
+    
+    This function selectively mutates bases in the promoter sequence that are not 'A' or 'T', 
+    aiming to introduce mutations at a specified rate into these specific bases.
+
+    Args:
+        promoter_seq (str): The original promoter DNA sequence to mutate.
+        num_mutants (int): The number of unique mutants to generate.
+        mutrate (float): The mutation rate applied specifically to non-AT bases.
+        allowed_alph (list): List of allowed nucleotides for mutation.
+
+    Returns:
+        list: A list of mutant sequences generated from the original sequence.
+    """
+
     indices = []
     subseq = ''
     for i, nt in enumerate(promoter_seq):
         if nt not in ['A', 'T']:
             indices.append(i)
             subseq += nt
+
+    if not subseq:  # Prevent division by zero
+        return [promoter_seq]
 
     _mutants = np.unique(mutations_rand(subseq,
                                         rate=mutrate * len(promoter_seq) / len(subseq),
@@ -454,7 +493,7 @@ def biased_mutants(promoter_seq,
     for mutant in _mutants:
         mutseq = ''
         mut_index = 0
-        for j in range(160):
+        for j in range(len(promoter_seq)):
             if j not in indices:
                 mutseq += promoter_seq[j]
             else:
@@ -466,24 +505,49 @@ def biased_mutants(promoter_seq,
 
 
 def sim(promoter_seq, func_pbound, binding_site_seqs, *args,
+        preset_mutants=None,
         num_mutants=5000,
         mutrate=0.1,
         biased=False,
         allowed_alph=None,
         scaling_factor=100):
+    """
+    Simulate the binding probabilities for a given promoter sequence using predefined or generated mutants.
+
+    This function allows simulation with either a provided list of mutant sequences or by generating
+    mutants based on the given parameters. It calculates the binding probabilities for specified 
+    regions within these sequences.
+
+    Args:
+        promoter_seq (str): The promoter sequence for simulation.
+        func_pbound (function): Function to calculate binding probabilities.
+        binding_site_seqs (list): Sequences defining specific binding sites within the promoter.
+        preset_mutants (list, optional): Predefined list of mutant sequences to use.
+        num_mutants (int, optional): Number of mutants to generate if not using preset.
+        mutrate (float, optional): Mutation rate for generating mutants.
+        biased (bool, optional): Whether to apply biased mutation generation.
+        allowed_alph (list, optional): Allowed nucleotides for mutations.
+        scaling_factor (int, optional): Factor to scale the calculated probabilities.
+
+    Returns:
+        pd.DataFrame: DataFrame containing the sequences, original counts, mutated counts, and normalized counts.
+    """
     
-    if biased:
-        mutants = biased_mutants(promoter_seq,
-                                 mutrate=mutrate,
-                                 num_mutants=num_mutants,
-                                 allowed_alph=allowed_alph)
+    if preset_mutants is None:
+        if biased:
+            mutants = biased_mutants(promoter_seq,
+                                    mutrate=mutrate,
+                                    num_mutants=num_mutants,
+                                    allowed_alph=allowed_alph)
+        else:
+            mutants = np.unique(mutations_rand(promoter_seq,
+                                        rate=mutrate,
+                                        num_mutants=num_mutants,
+                                        allowed_alph=allowed_alph,
+                                        number_fixed=True,
+                                        keep_wildtype=True))
     else:
-        mutants = np.unique(mutations_rand(promoter_seq,
-                                       rate=mutrate,
-                                       num_mutants=num_mutants,
-                                       allowed_alph=allowed_alph,
-                                       number_fixed=True,
-                                       keep_wildtype=True))
+        mutants = preset_mutants
     
     regions = []
     for bss in binding_site_seqs:
@@ -505,32 +569,7 @@ def sim(promoter_seq, func_pbound, binding_site_seqs, *args,
 
     return df_sim
 
-
-def sim_preset_library(promoter_seq, func_pbound, binding_site_seqs, *args,
-                       mutants,
-                       scaling_factor=100):
-    
-    regions = []
-    for bss in binding_site_seqs:
-        start, end = find_binding_site(promoter_seq, bss)
-        regions.append((start, end))
-
-    df_sim = sim_helper(mutants, func_pbound, regions, *args)
-    
-    dna_cnt = get_dna_cnt(len(df_sim))
-    df_sim['ct_0'] = dna_cnt
-    df_sim = df_sim[df_sim.ct_0 != 0.0]
-
-    df_sim['ct_1'] = 0.1 + df_sim['ct_0'] * df_sim['pbound'] * scaling_factor
-    df_sim['ct_1'] = df_sim['ct_1'].astype(int)
-
-    df_sim['ct_0'] = df_sim['ct_0'].astype(float)
-    df_sim['ct_1'] = df_sim['ct_1'].astype(float)
-    df_sim['norm_ct_1'] = df_sim['ct_1'] / df_sim['ct_0']
-
-    return df_sim
-
-
+'''
 ## library with mutants with point mutations
 
 def get_binding_site_indices(regions):
@@ -583,3 +622,4 @@ def sim_pointmut(promoter_seq, func_pbound, binding_site_seqs,
     df_sim['norm_ct_1'] = df_sim['ct_1'] / df_sim['ct_0']
 
     return df_sim
+'''

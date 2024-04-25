@@ -1,4 +1,3 @@
-import datetime
 import numpy as np
 import pandas as pd
 from .utils import smoothing
@@ -6,11 +5,8 @@ from .mpl_pboc import plotting_style
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
-from matplotlib.lines import Line2D
-from matplotlib import font_manager
 
 plt.rcParams.update({'font.size': 12})
-#font_manager.fontManager.addfont('/Users/rosalindpan/rpgroup/projects/theoretical-regseq/misc/lucida-sans-unicode.ttf')
 plotting_style()
 
 
@@ -53,12 +49,28 @@ def get_p_b(all_mutarr, n_seqs, pseudocount=0):
     #tot_mut_cnt = np.sum(all_mutarr * mu_data.values[:, np.newaxis], axis=0)
     #p_mut = tot_mut_cnt / np.sum(mu_data)
     tot_mut_cnt = np.sum(all_mutarr, axis=0)
-    p_mut = (tot_mut_cnt + pseudocount) / n_seqs
+    p_mut = (tot_mut_cnt + pseudocount) / (n_seqs + pseudocount)
 
     return np.asarray([1 - p_mut, p_mut]).T
 
 
 def bin_expression_levels(mu_data, nbins, upper_bound):
+    """
+    Bins the expression levels data into specified number of bins with a given upper bound.
+
+    Args:
+        mu_data (np.array or pd.Series): Array or series containing expression level data.
+        nbins (int): The number of bins to divide the data into.
+        upper_bound (float): The maximum value for the bins.
+
+    Returns:
+        tuple:
+            - np.array: Array of bin indices for each element in the input data.
+            - np.array: Array of counts of elements in each bin.
+
+    Raises:
+        ValueError: If `nbins` is less than 1 or `upper_bound` is less than the maximum of `mu_data`.
+    """
     
     bins = np.linspace(0, upper_bound, nbins).tolist()
     bins.append(int(max(mu_data) + 1))
@@ -72,23 +84,40 @@ def bin_expression_levels(mu_data, nbins, upper_bound):
     mu_bins = binned.values
     bin_cnt = binned.value_counts(sort=False).values
 
-
-    #df_tmp = pd.DataFrame(mu_data)
-    #df_tmp.sort_values(by='norm_ct_1', ascending=True, inplace = True)
-
-    #splits = np.array_split(df_tmp, nbins)
-    #for i in range(len(splits)):
-    #    splits[i]['group'] = i + 1
-    #df_tmp = pd.concat(splits)
-    #df_tmp.sort_index(inplace=True)
-    #mu_bins = df_tmp['group'].values - 1
-
-    #bin_cnt = df_tmp.groupby(['group']).size()
-
     return mu_bins, np.asarray(bin_cnt)
+
+'''
+def bin_expression_levels2(mu_data, nbins):
+
+        df_tmp = pd.DataFrame(mu_data)
+        df_tmp.sort_values(by='norm_ct_1', ascending=True, inplace = True)
+
+        splits = np.array_split(df_tmp, nbins)
+        for i in range(len(splits)):
+            splits[i]['group'] = i + 1
+        df_tmp = pd.concat(splits)
+        df_tmp.sort_index(inplace=True)
+        mu_bins = df_tmp['group'].values - 1
+
+        bin_cnt = df_tmp.groupby(['group']).size()
+
+        return mu_bins, np.asarray(bin_cnt)
+'''
 
 
 def get_p_mu(bin_cnt, n_seqs):
+
+    """
+    Calculate the probability of sequences falling into each bin.
+
+    Args:
+        bin_cnt (np.array): Array containing counts of sequences in each bin.
+        n_seqs (int): Total number of sequences that were binned.
+
+    Returns:
+        np.array: An array of probabilities for each bin.
+    """
+
     return bin_cnt / n_seqs
 
 
@@ -126,6 +155,30 @@ def get_joint_p(all_mutarr, mu_bins, nbins,
 
 def MI(list_p_b, p_mu, list_joint_p,
        len_promoter=160):
+    """
+    Calculates the mutual information (MI) between mutations and expression levels 
+    across each position of a promoter sequence.
+
+    Args:
+        list_p_b (list of np.array): List of arrays where each entry corresponds to 
+                                     the probabilities of the wild type and mutated base
+                                     at each position of the promoter.
+        p_mu (np.array): Array of probabilities for each expression level bin.
+        list_joint_p (list of np.array): List of 3D arrays where each entry contains 
+                                         joint probabilities of base identity and 
+                                         expression bins at each base position.
+        len_promoter (int, optional): The total number of bases in the promoter 
+                                      sequence. Defaults to 160.
+
+    Returns:
+        list: Mutual information values for each position along the promoter, measured in bits.
+
+    Note:
+        This function assumes that the input probabilities are valid and that the logarithmic 
+        operations do not encounter log(0) due to proper handling of zero probabilities with 
+        pseudocounts.
+    """
+
     mutual_info = []
     for position in range(len_promoter):
         p_b = list_p_b[position]
@@ -144,8 +197,25 @@ def MI(list_p_b, p_mu, list_joint_p,
 def get_info_footprint(mut_list, mu_data, wtseq,
                        nbins, upper_bound,
                        pseudocount=10**(-6), len_promoter=160,
-                       smoothed=True, windowsize=3,
-                       fast=False):
+                       smoothed=True, windowsize=3):
+    """
+    Calculates the information footprint of a promoter.
+
+    Args:
+        mut_list (list of str): List of mutant sequences.
+        mu_data (np.array): Expression levels corresponding to each sequence in mut_list.
+        wtseq (str): Wild type sequence of the promoter.
+        nbins (int): Number of bins to divide the expression data into.
+        upper_bound (float): The maximum value to consider for the bins in expression data.
+        pseudocount (float, optional): Pseudocount to avoid division by zero in probability calculations.
+        len_promoter (int, optional): Length of the promoter analyzed. Defaults to 160.
+        smoothed (bool, optional): Whether to smooth the resulting footprint. Defaults to True.
+        windowsize (int, optional): Size of the window used for smoothing. Defaults to 3.
+
+    Returns:
+        np.array: Array of mutual information values across the promoter positions.
+    """
+
     n_seqs = len(mut_list)
 
     #print('start time: {}'.format(datetime.datetime.now()))
@@ -170,6 +240,19 @@ def get_info_footprint(mut_list, mu_data, wtseq,
 
 def get_expression_shift(mut_list, mu_data, wtseq,
                          len_promoter=160):
+    """
+    Calculates the expression shift due to mutations at each position of a promoter.
+
+    Args:
+        mut_list (list of str): List of mutant sequences.
+        mu_data (np.array): Expression levels corresponding to each mutant in mut_list.
+        wtseq (str): Wild type sequence of the promoter.
+        len_promoter (int, optional): Length of the promoter analyzed. Defaults to 160.
+
+    Returns:
+        np.array: Array representing the average expression shift at each promoter position.
+    """
+
     n_seqs = len(mu_data)
     avg_mu = np.mean(mu_data)
     all_mutarr = match_seqs(wtseq, mut_list)
@@ -186,74 +269,6 @@ def get_expression_shift(mut_list, mu_data, wtseq,
     exshift_list = smoothing(exshift_list, windowsize=3)
     
     return exshift_list
-
-
-## code to calculate information footprint based on the eLife paper
-
-def flip_boolean(arr):
-
-    nrow, ncol = arr.shape
-    flipped_arr = np.zeros((nrow, ncol))
-    for i in range(nrow):
-        for j in range(ncol):
-            if arr[i][j] == 0:
-                flipped_arr[i][j] = 1
-
-    return flipped_arr
-
-
-def count_mut(all_mutarr, cnt_seq, tot_cnt_seq):
-
-    _cnt = np.multiply(all_mutarr, cnt_seq[:, np.newaxis])
-    cnt = np.sum(_cnt, axis=0) / np.sum(tot_cnt_seq)
-    return cnt
-
-
-def count_tot(all_wtarr, all_mutarr, cnt_seq):
-    wt_cnt = np.multiply(all_wtarr, np.asarray(cnt_seq)[:, np.newaxis])
-    mut_cnt = np.multiply(all_mutarr, np.asarray(cnt_seq)[:, np.newaxis])
-    tot_wt_cnt = np.sum(wt_cnt, axis=0)
-    tot_mut_cnt = np.sum(mut_cnt, axis=0)
-    _cnt = np.stack([tot_wt_cnt, tot_mut_cnt])
-    cnt = _cnt / np.sum(_cnt, axis=0)
-    return cnt
-
-
-def MI_old(p_mut_tot, seq_cnt,
-       p_wt_dna, p_wt_rna, p_mut_dna, p_mut_rna,
-       seqlen=160):
-
-    mutual_info = []
-    for i in range(seqlen):
-        mi = p_wt_dna[i] * np.log2(p_wt_dna[i] / (p_mut_tot[:, i][0] * seq_cnt[0]))
-        mi += p_wt_rna[i] * np.log2(p_wt_rna[i] / (p_mut_tot[:, i][0] * seq_cnt[1]))
-        mi += p_mut_dna[i] * np.log2(p_mut_dna[i] / (p_mut_tot[:, i][1] * seq_cnt[0]))
-        mi += p_mut_rna[i] * np.log2(p_mut_rna[i] / (p_mut_tot[:, i][1] * seq_cnt[1]))
-        mutual_info.append(mi)
-        
-    return mutual_info
-
-
-def footprint_old(df, wtseq):
-
-    all_mutarr = match_seqs(wtseq, df['seq'].values)
-    all_wtarr = flip_boolean(all_mutarr)
-
-    seq_cnt = df[['ct_0', 'ct_1']].apply(np.sum).values
-    seq_cnt /= np.sum(df['ct'])
-
-    p_mut_tot = count_tot(all_wtarr, all_mutarr, df['ct'].values)
-
-    p_wt_dna = count_mut(all_wtarr, df['ct_0'].values, df['ct'].values)
-    p_wt_rna = count_mut(all_wtarr, df['ct_1'].values, df['ct'].values)
-    p_mut_dna = count_mut(all_mutarr, df['ct_0'].values, df['ct'].values)
-    p_mut_rna = count_mut(all_mutarr, df['ct_1'].values, df['ct'].values)
-
-    info_fp = MI_old(p_mut_tot, seq_cnt,
-                p_wt_dna, p_wt_rna, p_mut_dna, p_mut_rna,
-                seqlen=len(wtseq))
-    
-    return info_fp
 
 
 ## plotting information footprint
@@ -347,3 +362,73 @@ def plot_footprint(promoter, df, region_params,
 
     if return_fp:
         return footprint
+    
+
+'''
+## code to calculate information footprint based on the eLife paper
+
+def flip_boolean(arr):
+
+    nrow, ncol = arr.shape
+    flipped_arr = np.zeros((nrow, ncol))
+    for i in range(nrow):
+        for j in range(ncol):
+            if arr[i][j] == 0:
+                flipped_arr[i][j] = 1
+
+    return flipped_arr
+
+
+def count_mut(all_mutarr, cnt_seq, tot_cnt_seq):
+
+    _cnt = np.multiply(all_mutarr, cnt_seq[:, np.newaxis])
+    cnt = np.sum(_cnt, axis=0) / np.sum(tot_cnt_seq)
+    return cnt
+
+
+def count_tot(all_wtarr, all_mutarr, cnt_seq):
+    wt_cnt = np.multiply(all_wtarr, np.asarray(cnt_seq)[:, np.newaxis])
+    mut_cnt = np.multiply(all_mutarr, np.asarray(cnt_seq)[:, np.newaxis])
+    tot_wt_cnt = np.sum(wt_cnt, axis=0)
+    tot_mut_cnt = np.sum(mut_cnt, axis=0)
+    _cnt = np.stack([tot_wt_cnt, tot_mut_cnt])
+    cnt = _cnt / np.sum(_cnt, axis=0)
+    return cnt
+
+
+def MI_old(p_mut_tot, seq_cnt,
+       p_wt_dna, p_wt_rna, p_mut_dna, p_mut_rna,
+       seqlen=160):
+
+    mutual_info = []
+    for i in range(seqlen):
+        mi = p_wt_dna[i] * np.log2(p_wt_dna[i] / (p_mut_tot[:, i][0] * seq_cnt[0]))
+        mi += p_wt_rna[i] * np.log2(p_wt_rna[i] / (p_mut_tot[:, i][0] * seq_cnt[1]))
+        mi += p_mut_dna[i] * np.log2(p_mut_dna[i] / (p_mut_tot[:, i][1] * seq_cnt[0]))
+        mi += p_mut_rna[i] * np.log2(p_mut_rna[i] / (p_mut_tot[:, i][1] * seq_cnt[1]))
+        mutual_info.append(mi)
+        
+    return mutual_info
+
+
+def footprint_old(df, wtseq):
+
+    all_mutarr = match_seqs(wtseq, df['seq'].values)
+    all_wtarr = flip_boolean(all_mutarr)
+
+    seq_cnt = df[['ct_0', 'ct_1']].apply(np.sum).values
+    seq_cnt /= np.sum(df['ct'])
+
+    p_mut_tot = count_tot(all_wtarr, all_mutarr, df['ct'].values)
+
+    p_wt_dna = count_mut(all_wtarr, df['ct_0'].values, df['ct'].values)
+    p_wt_rna = count_mut(all_wtarr, df['ct_1'].values, df['ct'].values)
+    p_mut_dna = count_mut(all_mutarr, df['ct_0'].values, df['ct'].values)
+    p_mut_rna = count_mut(all_mutarr, df['ct_1'].values, df['ct'].values)
+
+    info_fp = MI_old(p_mut_tot, seq_cnt,
+                p_wt_dna, p_wt_rna, p_mut_dna, p_mut_rna,
+                seqlen=len(wtseq))
+    
+    return info_fp
+'''

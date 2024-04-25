@@ -1,6 +1,5 @@
 import numpy as np
 
-
 def smoothing(y, windowsize=3):
 
     if windowsize % 2 != 1:
