@@ -1,6 +1,6 @@
 import numpy as np
 import pandas as pd
-from .utils import smoothing
+from .utils import smoothing, smoothing_2d
 from .mpl_pboc import plotting_style
 
 import matplotlib as mpl
@@ -267,8 +267,49 @@ def get_expression_shift(mut_list, mu_data, wtseq,
     
     #if smoothed:
     exshift_list = smoothing(exshift_list, windowsize=3)
+
     
     return exshift_list
+
+
+def get_expression_shift_matrix(df, wtseq,
+                                len_promoter=160, smoothed=False):
+    
+    seqs = df['seq'].values
+    mu_data = df['norm_ct_1']
+
+    n_seqs = len(seqs)
+    avg_mu = np.mean(mu_data)
+
+    def make_int(x):
+        dict = {'A': 1, 'C': 2, 'G': 3, 'T': 4}
+        return [dict[y] for y in x]
+
+    int_seqs = []
+    for i_seq in range(n_seqs):
+        seq = seqs[i_seq].upper()
+        int_seqs.append(make_int(seq))
+
+    int_wtseq = make_int(wtseq)
+
+    exshift_list = []
+    for position in range(len_promoter):
+        ex_shift = np.zeros(4)
+        for base in range(4):
+            if base + 1 != int_wtseq[position]:
+                for i_seq in range(n_seqs):
+                    int_seq = int_seqs[i_seq]
+                    if (int_seq[position] == base + 1):
+                        ex_shift[base] += (mu_data[i_seq] - avg_mu) / avg_mu
+        ex_shift /= n_seqs
+        exshift_list.append(ex_shift)
+    
+    exshift_arr = np.asarray(exshift_list).T
+    
+    if smoothed:
+        exshift_arr = smoothing_2d(exshift_arr, windowsize=3)
+    
+    return exshift_arr
 
 
 ## plotting information footprint
@@ -315,6 +356,8 @@ def plot_footprint(promoter, df, region_params,
 
     if x_lims is not None:
         ax.set_xlim(x_lims[0], x_lims[1])
+    else:
+        ax.set_xlim(-115, 45)
 
     if max_signal is None:
         max_signal = max(footprint)
