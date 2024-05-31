@@ -8,8 +8,6 @@ All raw and processed data.
 ### **`figure`** 
 All code used to generate figures for the manuscript.
 
-### **`misc`** 
-
 ### **`notebooks`** 
 Analysis for each vignette in the manuscript.
 
