@@ -5,11 +5,3 @@ This is a python software module which includes all custom written code needed f
 `pip install -e .`
 
 Afterwards the package can simply be imported in any python code. 
-
-
-### Modules
-There are various submodules that contain functions similar contexts. 
-
- - `footprint.py` 
- - `simulate.py` 
- - `wgregseq.py`: Functions are written by Tom Roeschinger.
