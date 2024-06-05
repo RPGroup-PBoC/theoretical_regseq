@@ -47,7 +47,6 @@ def get_p_b(all_mutarr, n_seqs, pseudocount=0):
     '''    
 
     #tot_mut_cnt = np.sum(all_mutarr * mu_data.values[:, np.newaxis], axis=0)
-    #p_mut = tot_mut_cnt / np.sum(mu_data)
     tot_mut_cnt = np.sum(all_mutarr, axis=0)
     p_mut = (tot_mut_cnt + pseudocount) / (n_seqs + pseudocount)
 
@@ -337,11 +336,11 @@ def label_binding_site(ax, start, end, max_signal, type, label,
 
 def plot_footprint(promoter, df, region_params,
                    nbins=2, up_scaling_factor=1,
-                   x_lims=None, fig_width=10, fig_height=2.9, legend_xcoord=1.2,
-                   max_signal=None,
-                   outfile=None, annotate_stn=True,
-                   return_fp=False,
-                   smoothed=True, windowsize=3,):
+                   smoothed=True, windowsize=3,
+                   max_signal=None, x_lims=None,
+                   fig_width=10, fig_height=2.9,
+                   outfile=None,
+                   return_fp=False):
     
     mut_list = df['seq'].values
     mu_data = df['norm_ct_1']
@@ -363,18 +362,12 @@ def plot_footprint(promoter, df, region_params,
         max_signal = max(footprint)
     
     ax.set_ylim(top=max_signal*1.15)
-    total_signal = 0
     for region in region_params:
         if len(region)==4:
             label_binding_site(ax, region[0], region[1], max_signal, region[2], region[3])
         else:
             label_binding_site(ax, region[0], region[1], max_signal, region[2], region[3],
                            lifted=region[4])
-        total_signal += np.sum(footprint[(region[0]+115):(region[1]+116)])
-    total_noise = np.sum(footprint) - total_signal
-    mean_signal = total_signal / (region[1] - region[0] + 1)
-    mean_noise = total_noise / (160 - (region[1] - region[0] + 1))
-    stn_ratio = mean_signal / mean_noise
 
     if smoothed:
         cut = int((windowsize - 1) / 2)
@@ -388,15 +381,6 @@ def plot_footprint(promoter, df, region_params,
 
     ax.tick_params(axis='x', labelsize=14)
     ax.tick_params(axis='y', labelsize=14)
-
-    if annotate_stn:
-        ax.annotate('Signal-to-noise ratio = {:.2f}'.format(stn_ratio), xy=(-115, 0.9*max_signal))
-
-    #custom_lines = [Line2D([0], [0], color='#D56C55', lw=4),
-    #                Line2D([0], [0], color='#738FC1', lw=4)]
-    #plt.legend(custom_lines,
-    #        ['Mutation\nincreases\nexpression', 'Mutation\ndecreases\nexpression'],
-    #        bbox_to_anchor=(legend_xcoord, 1), frameon=False)
 
     plt.tight_layout()
     if outfile is not None:
