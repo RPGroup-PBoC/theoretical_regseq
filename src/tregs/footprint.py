@@ -229,7 +229,7 @@ def get_info_footprint(mut_list, mu_data, wtseq,
                                pseudocount=pseudocount, len_promoter=len_promoter)
     #print('finished calculating joint probability distribution: {}'.format(datetime.datetime.now()))
 
-    footprint = MI(list_p_b, p_mu, list_joint_p)
+    footprint = MI(list_p_b, p_mu, list_joint_p, len_promoter=len_promoter)
     #print('finished calculating mutual information: {}'.format(datetime.datetime.now()))
     if smoothed:
         footprint = smoothing(footprint, windowsize=windowsize)
@@ -336,6 +336,7 @@ def label_binding_site(ax, start, end, max_signal, type, label,
 
 def plot_footprint(promoter, df, region_params,
                    nbins=2, up_scaling_factor=1,
+                   pseudocount=10**(-6),
                    smoothed=True, windowsize=3,
                    max_signal=None, x_lims=None,
                    fig_width=10, fig_height=2.9,
@@ -346,17 +347,25 @@ def plot_footprint(promoter, df, region_params,
     mu_data = df['norm_ct_1']
     upper_bound = up_scaling_factor * np.mean(mu_data)
 
+    len_promoter = len(promoter)
+
     footprint = get_info_footprint(mut_list, mu_data, promoter, nbins, upper_bound,
-                                               pseudocount=10**(-6),
-                                               smoothed=smoothed, windowsize=windowsize)
-    exshift_list = get_expression_shift(mut_list, mu_data.values, promoter)
+                                               pseudocount=pseudocount,
+                                               smoothed=smoothed, windowsize=windowsize,
+                                               len_promoter=len_promoter)
+    exshift_list = get_expression_shift(mut_list, mu_data.values, promoter,
+                                        len_promoter=len_promoter)
     
     fig, ax = plt.subplots(figsize=(fig_width, fig_height))
 
     if x_lims is not None:
-        ax.set_xlim(x_lims[0], x_lims[1])
+        left_x_lim = x_lims[0]
+        right_x_lim = x_lims[1]
     else:
-        ax.set_xlim(-115, 45)
+        left_x_lim = -115
+        right_x_lim = 45
+
+    ax.set_xlim(left_x_lim, right_x_lim)
 
     if max_signal is None:
         max_signal = max(footprint)
@@ -371,9 +380,9 @@ def plot_footprint(promoter, df, region_params,
 
     if smoothed:
         cut = int((windowsize - 1) / 2)
-        x = np.arange(-115 + cut, 45 - cut)
+        x = np.arange(left_x_lim + cut, right_x_lim - cut)
     else:
-        x = np.arange(-115, 45)
+        x = np.arange(left_x_lim, right_x_lim)
     shiftcolors = [('#D56C55' if exshift > 0 else '#738FC1') for exshift in exshift_list]
     ax.bar(x, footprint, color=shiftcolors, edgecolor=None, linewidth=0)
     ax.set_ylabel('Information (bits)', fontsize=16)
