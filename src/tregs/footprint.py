@@ -5,6 +5,7 @@ from .mpl_pboc import plotting_style
 
 import matplotlib as mpl
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 plt.rcParams.update({'font.size': 12})
 plotting_style()
@@ -400,71 +401,31 @@ def plot_footprint(promoter, df, region_params,
         return footprint
     
 
-'''
-## code to calculate information footprint based on the eLife paper
+def plot_exshift(promoter, df,
+                 vmax_scaling=0.5,
+                 outfile=None):
+    exshift = get_expression_shift_matrix(df, promoter)
 
-def flip_boolean(arr):
+    fig, ax = plt.subplots(figsize=(15, 2))
 
-    nrow, ncol = arr.shape
-    flipped_arr = np.zeros((nrow, ncol))
-    for i in range(nrow):
-        for j in range(ncol):
-            if arr[i][j] == 0:
-                flipped_arr[i][j] = 1
+    vmax = np.max(np.abs(exshift)) * vmax_scaling
+    vmin = -vmax
 
-    return flipped_arr
+    div_colors = sns.diverging_palette(258, 16, s=56, l=50, n=15, sep=5, center='light', as_cmap=True)
+    hm = sns.heatmap(exshift, cmap=div_colors, ax=ax, vmin=vmin, vmax=vmax, center=0)
+    ax.set_yticklabels(['A', 'C', 'G', 'T'], rotation=360, fontsize=14)
+    ax.set_xlabel('Position Relative to TSS', fontsize=16)
 
+    tick_positions = np.arange(15, 161, 20)
+    tick_labels = np.arange(-100, 41, 20)
+    ax.set_xticks(tick_positions)
+    ax.set_xticklabels(tick_labels, rotation=360, fontsize=15)
 
-def count_mut(all_mutarr, cnt_seq, tot_cnt_seq):
+    cbar = hm.collections[0].colorbar
+    cbar.ax.set_position([ax.get_position().x1 + 0.01, ax.get_position().y0, 0.02, ax.get_position().height])
+    cbar.set_label('Expression\nshift', rotation=90, labelpad=15, fontsize=14)
+    cbar.ax.tick_params(labelsize=13) 
 
-    _cnt = np.multiply(all_mutarr, cnt_seq[:, np.newaxis])
-    cnt = np.sum(_cnt, axis=0) / np.sum(tot_cnt_seq)
-    return cnt
-
-
-def count_tot(all_wtarr, all_mutarr, cnt_seq):
-    wt_cnt = np.multiply(all_wtarr, np.asarray(cnt_seq)[:, np.newaxis])
-    mut_cnt = np.multiply(all_mutarr, np.asarray(cnt_seq)[:, np.newaxis])
-    tot_wt_cnt = np.sum(wt_cnt, axis=0)
-    tot_mut_cnt = np.sum(mut_cnt, axis=0)
-    _cnt = np.stack([tot_wt_cnt, tot_mut_cnt])
-    cnt = _cnt / np.sum(_cnt, axis=0)
-    return cnt
-
-
-def MI_old(p_mut_tot, seq_cnt,
-       p_wt_dna, p_wt_rna, p_mut_dna, p_mut_rna,
-       seqlen=160):
-
-    mutual_info = []
-    for i in range(seqlen):
-        mi = p_wt_dna[i] * np.log2(p_wt_dna[i] / (p_mut_tot[:, i][0] * seq_cnt[0]))
-        mi += p_wt_rna[i] * np.log2(p_wt_rna[i] / (p_mut_tot[:, i][0] * seq_cnt[1]))
-        mi += p_mut_dna[i] * np.log2(p_mut_dna[i] / (p_mut_tot[:, i][1] * seq_cnt[0]))
-        mi += p_mut_rna[i] * np.log2(p_mut_rna[i] / (p_mut_tot[:, i][1] * seq_cnt[1]))
-        mutual_info.append(mi)
-        
-    return mutual_info
-
-
-def footprint_old(df, wtseq):
-
-    all_mutarr = match_seqs(wtseq, df['seq'].values)
-    all_wtarr = flip_boolean(all_mutarr)
-
-    seq_cnt = df[['ct_0', 'ct_1']].apply(np.sum).values
-    seq_cnt /= np.sum(df['ct'])
-
-    p_mut_tot = count_tot(all_wtarr, all_mutarr, df['ct'].values)
-
-    p_wt_dna = count_mut(all_wtarr, df['ct_0'].values, df['ct'].values)
-    p_wt_rna = count_mut(all_wtarr, df['ct_1'].values, df['ct'].values)
-    p_mut_dna = count_mut(all_mutarr, df['ct_0'].values, df['ct'].values)
-    p_mut_rna = count_mut(all_mutarr, df['ct_1'].values, df['ct'].values)
-
-    info_fp = MI_old(p_mut_tot, seq_cnt,
-                p_wt_dna, p_wt_rna, p_mut_dna, p_mut_rna,
-                seqlen=len(wtseq))
-    
-    return info_fp
-'''
+    if outfile is not None:
+        plt.savefig(outfile, bbox_inches='tight')
+        plt.show()
