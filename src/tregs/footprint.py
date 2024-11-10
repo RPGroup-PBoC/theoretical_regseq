@@ -381,9 +381,9 @@ def plot_footprint(promoter, df, region_params,
 
     if smoothed:
         cut = int((windowsize - 1) / 2)
-        x = np.arange(left_x_lim + cut, right_x_lim - cut)
+        x = np.arange(-115 + cut, 45 - cut)
     else:
-        x = np.arange(left_x_lim, right_x_lim)
+        x = np.arange(-115, 45)
     shiftcolors = [('#D56C55' if exshift > 0 else '#738FC1') for exshift in exshift_list]
     ax.bar(x, footprint, color=shiftcolors, edgecolor=None, linewidth=0)
     ax.set_ylabel('Information (bits)', fontsize=16)
