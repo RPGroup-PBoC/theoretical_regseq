@@ -1,0 +1,22 @@
+[project]
+name = "tregs"
+version = "0.0.1"
+authors = [
+    {name = "Rosalind Pan", email = "rosalindpan@caltech.edu"},
+    {name = "Tom Roeschinger", email = "tom@caltech.edu"}
+]
+description = "My package description"
+readme = "README.rst"
+requires-python = ">=3.8,<3.13"
+keywords = ["Reg-Seq"]
+classifiers = [
+    "Programming Language :: Python :: 3",
+]
+dependencies = [
+    "numpy",
+    "numba",
+    "BioPython",
+    "matplotlib",
+    "seaborn",
+    "pandas"
+]

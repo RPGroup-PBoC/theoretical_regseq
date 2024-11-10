@@ -1,7 +1,6 @@
 import math
 import numpy as np
 import pandas as pd
-import sympy as sym
 from .seq_utils import seq_to_list, find_binding_site
 from .wgregseq import mutations_rand
 from .solve_utils import solve_biquadratic
