@@ -18,5 +18,8 @@ dependencies = [
     "BioPython",
     "matplotlib",
     "seaborn",
-    "pandas"
+    "pandas",
+    "sympy",
+    "ipykernel",
+    "scipy"
 ]
