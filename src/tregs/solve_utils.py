@@ -2,6 +2,16 @@ import numpy as np
 import sympy as sym
 
 def coeffs_eq1(P, M, N, x_p, y_p, x_r, y_r):
+    """
+    Computes coefficients for the first equation based on given parameters.
+
+    Args:
+        P, M, N (float): Input parameters for the equation.
+        x_p, y_p, x_r, y_r (float): Interaction terms.
+
+    Returns:
+        tuple: Coefficients (a, b, c, d, e, f) for the equation.
+    """
     a = (P - M - N) * x_p * y_p
     b = P * x_p + P * y_p - M * x_p - N * y_p
     c = P * x_r * y_r
@@ -12,6 +22,16 @@ def coeffs_eq1(P, M, N, x_p, y_p, x_r, y_r):
 
 
 def coeffs_eq2(R, M, N, x_p, y_p, x_r, y_r):
+    """
+    Computes coefficients for the second equation based on given parameters.
+
+    Args:
+        R, M, N (float): Input parameters for the equation.
+        x_p, y_p, x_r, y_r (float): Interaction terms.
+
+    Returns:
+        tuple: Coefficients (A, B, C, D, E, F) for the equation.
+    """
     A = R * x_p * y_p
     B = R * (x_p + y_p)
     C = (R - M - N) * x_r * y_r
@@ -22,6 +42,16 @@ def coeffs_eq2(R, M, N, x_p, y_p, x_r, y_r):
 
 
 def coeffs_combined(a, b, c, d, e, f, A, B, C, D, E, F):
+    """
+    Combines coefficients from two equations into a set of combined coefficients.
+
+    Args:
+        a, b, c, d, e, f (float): Coefficients from the first equation.
+        A, B, C, D, E, F (float): Coefficients from the second equation.
+
+    Returns:
+        tuple: Combined coefficients (_a, _b, _c, _d, _e, _f, _g, _h).
+    """
     _a = (e**2 - 2 * a * c) * A - a * e * E + 2 * a**2 * C
     _b = 2 * A * (b * e - a * d) - a * (e * B + b * E) + 2 * a**2 * D
     _c = (b**2 - 2 * a * f) * A - a * b * B + 2 * a** 2 * F
@@ -34,6 +64,15 @@ def coeffs_combined(a, b, c, d, e, f, A, B, C, D, E, F):
 
 
 def get_final_coeffs(a, b, c, d, e, f, g, h):
+    """
+    Computes the final set of coefficients for solving the biquadratic equation.
+
+    Args:
+        a, b, c, d, e, f, g, h (float): Combined coefficients.
+
+    Returns:
+        list: List of final coefficients [coeff4, coeff3, coeff2, coeff1, coeff0].
+    """
     coeff4 = a**2 - d**2 * f
     coeff3 = 2 * a * b - d**2 * g - 2 * d * e * f
     coeff2 = 2 * a * c + b**2 - d**2 * h - 2 * d * e * g - e**2 * f
@@ -43,6 +82,16 @@ def get_final_coeffs(a, b, c, d, e, f, g, h):
 
 
 def find_x(y, a, b, c, d, e, f):
+    """
+    Solves for x in a quadratic equation given y and coefficients.
+
+    Args:
+        y (float): Input value for y.
+        a, b, c, d, e, f (float): Coefficients of the equation.
+
+    Returns:
+        float: The solution x that satisfies the equation.
+    """
     x1 = - b - e * y - np.sqrt((b + e*y)**2 - 4 * a * (c * y**2 + d * y + f))
     x1 = x1 / (2 * a)
 
@@ -54,6 +103,17 @@ def find_x(y, a, b, c, d, e, f):
 
 
 def satisfy_equations(x, y, P, R, M, N, x_p, y_p, x_r, y_r):
+    """
+    Checks if given values of x and y satisfy the system of equations.
+
+    Args:
+        x, y (float): Solution values to check.
+        P, R, M, N (float): Input parameters.
+        x_p, y_p, x_r, y_r (float): Interaction terms.
+
+    Returns:
+        bool: True if both equations are satisfied within a tolerance, False otherwise.
+    """
     term1 = 1 + x * x_p + y * x_r
     term2 = 1 + x * y_p + y * y_r
     diff1 = abs((term1 * term2 * P) - (M * x_p * x * term2 + N * y_p * x * term1))
@@ -62,6 +122,17 @@ def satisfy_equations(x, y, P, R, M, N, x_p, y_p, x_r, y_r):
 
 
 def simrep_fugacity_hardsolve(P, R, M, N, x_p, y_p, x_r, y_r, beta=1):
+    """
+    Solves for fugacity values using symbolic equations.
+
+    Args:
+        P, R, M, N (float): Input parameters.
+        x_p, y_p, x_r, y_r (float): Interaction terms.
+        beta (float, optional): Scaling parameter for symbolic solve. Defaults to 1.
+
+    Returns:
+        tuple: Positive real solutions for (l_p, l_r) if unique, otherwise None.
+    """
     l_p, l_r = sym.symbols('l_p, l_r')
 
     a = 1 + l_p * x_p + l_r * x_r
@@ -83,6 +154,16 @@ def simrep_fugacity_hardsolve(P, R, M, N, x_p, y_p, x_r, y_r, beta=1):
 
 
 def solve_biquadratic(P, R, M, N, x_p, y_p, x_r, y_r):
+    """
+    Solves a biquadratic equation system to find x and y values.
+
+    Args:
+        P, R, M, N (float): Input parameters.
+        x_p, y_p, x_r, y_r (float): Interaction terms.
+
+    Returns:
+        tuple: Solution values (x, y) that satisfy the equation system.
+    """
     a, b, c, d, e, f = coeffs_eq1(P, M, N, x_p, y_p, x_r, y_r)
     A, B, C, D, E, F = coeffs_eq2(R, M, N, x_p, y_p, x_r, y_r)
     _a, _b, _c, _d, _e, _f, _g, _h = coeffs_combined(a, b, c, d, e, f, A, B, C, D, E, F)

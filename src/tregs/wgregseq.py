@@ -6,9 +6,14 @@ import numba
 
 def isint(var):
     """
-    Check if variable is of type `int` or type `float`, but an integer.
+    Checks if the variable is of type `int` or `float` (and an integer value if float).
+
+    Args:
+        var: The variable to check.
+
+    Returns:
+        bool: True if `var` is an integer or an integer-valued float; otherwise, False.
     """
-    
     if not (isinstance(var, int) or isinstance(var, np.int64)):
         if (isinstance(var, float) or isinstance(var, np.float64)):
             if not var.is_integer():
@@ -22,6 +27,18 @@ def isint(var):
     
 
 def random_mutation_generator(sequence, rate, num_mutants, number_fixed):
+    """
+    Generates a list of random mutant sequences based on a mutation rate.
+
+    Args:
+        sequence (str): The wild type sequence.
+        rate (float): Mutation rate.
+        num_mutants (int): Number of mutants to generate.
+        number_fixed (bool): If True, fixes the number of mutations to the product of rate and sequence length.
+
+    Returns:
+        np.array: Array of generated mutant sequences.
+    """
     mutant_list = np.empty(num_mutants, dtype=object)
     for i in range(num_mutants):
         mutant_list[i] = _random_mutation_generator(sequence, rate, number_fixed)
@@ -54,6 +71,18 @@ def mutate_from_index(sequence, index, alph):
 
 
 def mutate_with_bias(sequence, index, letters, allowed_alph):
+    """
+    Mutates a sequence with mutational bias.
+
+    Args:
+        sequence (str): Wild type sequence.
+        index (array): Positions to mutate.
+        letters (array): Mutation options.
+        allowed_alph (array): Allowed mutational spectrum for each position.
+
+    Returns:
+        str: Mutated sequence with bias applied.
+    """
     seq_list = list(sequence)
     for _loci in index:
         loci = _loci[0]
@@ -153,6 +182,17 @@ def mutations_rand(
 
 @numba.njit
 def _random_mutation_generator(sequence, rate, number_fixed):
+    """
+    Generates random mutation indices for a sequence based on mutation rate.
+
+    Args:
+        sequence (str): Wild type sequence.
+        rate (float): Mutation rate.
+        number_fixed (bool): Whether to fix the number of mutations based on rate.
+
+    Returns:
+        list: List of tuples with mutation positions and mutations.
+    """
     if number_fixed:
         num_mutations = int(rate*len(sequence))
     else:
@@ -164,11 +204,31 @@ def _random_mutation_generator(sequence, rate, number_fixed):
 
 @numba.njit
 def filter_letter(x, letter):
+    """
+    Helper function to filter out the specified letter.
+
+    Args:
+        x: Character to compare.
+        letter: Target letter to filter out.
+
+    Returns:
+        bool: True if `x` is not `letter`.
+    """
     return x != letter
 
 
 @numba.njit
 def filter_mutation(letter, alph):
+    """
+    Filters mutations by excluding the original letter from allowed mutations.
+
+    Args:
+        letter (str): The original letter to mutate.
+        alph (np.array): Array of possible mutations.
+
+    Returns:
+        np.array: Array of allowed mutations, excluding the original letter.
+    """
     j = 0
     for i in range(alph.size):
         if filter_letter(alph[i], letter):
@@ -184,6 +244,17 @@ def filter_mutation(letter, alph):
 
 @numba.njit
 def choose_mutation_bias(letter, letters, allowed_alph):
+    """
+    Chooses allowed mutations based on the allowed mutational spectrum.
+
+    Args:
+        letter (str): Original letter to mutate.
+        letters (np.array): Array of possible mutation options.
+        allowed_alph (np.array): Allowed letters that each base can mutate to.
+
+    Returns:
+        np.array: Array of allowed mutations.
+    """
     if letter == 'A':
         _alph = allowed_alph[0]
     elif letter == 'C':
@@ -204,8 +275,20 @@ def choose_mutation_bias(letter, letters, allowed_alph):
 
     return alph
 
+
 @numba.njit
 def make_mutation(letter, letters, allowed_alph):
+    """
+    Mutates a letter based on allowed mutational spectrum.
+
+    Args:
+        letter (str): Original letter to mutate.
+        letters (np.array): Array of allowed mutations.
+        allowed_alph (np.array): Allowed letters that each base can mutate to.
+
+    Returns:
+        str: Mutated letter based on allowed options.
+    """
     alph = choose_mutation_bias(letter, letters, allowed_alph)
     index = np.random.choice(np.arange(len(alph)))
     return alph[index]

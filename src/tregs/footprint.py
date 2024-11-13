@@ -86,24 +86,6 @@ def bin_expression_levels(mu_data, nbins, upper_bound):
 
     return mu_bins, np.asarray(bin_cnt)
 
-'''
-def bin_expression_levels2(mu_data, nbins):
-
-        df_tmp = pd.DataFrame(mu_data)
-        df_tmp.sort_values(by='norm_ct_1', ascending=True, inplace = True)
-
-        splits = np.array_split(df_tmp, nbins)
-        for i in range(len(splits)):
-            splits[i]['group'] = i + 1
-        df_tmp = pd.concat(splits)
-        df_tmp.sort_index(inplace=True)
-        mu_bins = df_tmp['group'].values - 1
-
-        bin_cnt = df_tmp.groupby(['group']).size()
-
-        return mu_bins, np.asarray(bin_cnt)
-'''
-
 
 def get_p_mu(bin_cnt, n_seqs):
 
@@ -239,7 +221,7 @@ def get_info_footprint(mut_list, mu_data, wtseq,
 
 
 def get_expression_shift(mut_list, mu_data, wtseq,
-                         len_promoter=160):
+                         len_promoter=160, smoothed=False):
     """
     Calculates the expression shift due to mutations at each position of a promoter.
 
@@ -268,12 +250,27 @@ def get_expression_shift(mut_list, mu_data, wtseq,
     #if smoothed:
     exshift_list = smoothing(exshift_list, windowsize=3)
 
+    if smoothed:
+        exshift_arr = smoothing_2d(exshift_arr, windowsize=3)
     
     return exshift_list
 
 
 def get_expression_shift_matrix(df, wtseq,
-                                len_promoter=160, smoothed=False):
+                                len_promoter=160):
+    """
+    Generates an expression shift matrix showing changes in expression for each possible mutation at each promoter position.
+
+    Args:
+        df (pandas.DataFrame): DataFrame containing mutant sequences and their normalized expression levels.
+            Expected columns: 'seq' (mutant sequence) and 'norm_ct_1' (normalized expression level).
+        wtseq (str): Wild type sequence of the promoter.
+        len_promoter (int, optional): Length of the promoter region being analyzed. Defaults to 160.
+
+    Returns:
+        np.ndarray: 2D array representing the expression shift for each base (A, C, G, T)
+                    at each position in the promoter.
+    """
     
     seqs = df['seq'].values
     mu_data = df['norm_ct_1']
@@ -306,9 +303,6 @@ def get_expression_shift_matrix(df, wtseq,
     
     exshift_arr = np.asarray(exshift_list).T
     
-    if smoothed:
-        exshift_arr = smoothing_2d(exshift_arr, windowsize=3)
-    
     return exshift_arr
 
 
@@ -316,6 +310,21 @@ def get_expression_shift_matrix(df, wtseq,
 
 def label_binding_site(ax, start, end, max_signal, type, label,
                        lifted=False):
+    """
+    Adds a shaded region and label to indicate a binding site on an information footprint.
+
+    Args:
+        ax (matplotlib.axes.Axes): The axis to plot on.
+        start (float): Start position of the binding site.
+        end (float): End position of the binding site.
+        max_signal (float): Maximum signal value for scaling placement of the label.
+        type (str): Type of binding site ('P', 'R', 'A').
+        label (str): Label text to display over the binding site.
+        lifted (bool, optional): Whether to lift the label position higher on the plot. Defaults to False.
+
+    Returns:
+        None
+    """
     shade_color = {'P': '#A9BFE3', 'R': '#E8B19D', 'A': '#DCECCB'}
     label_color = {'P': '#738FC1', 'R': '#D56C55', 'A': '#7AA974'}
     ax.axvspan(start, end, alpha=0.7, color=shade_color[type])
@@ -343,6 +352,28 @@ def plot_footprint(promoter, df, region_params,
                    fig_width=10, fig_height=2.9,
                    outfile=None,
                    return_fp=False):
+    """
+    Plots an information footprint with regions highlighted for binding sites.
+
+    Args:
+        promoter (str): Sequence of the promoter.
+        df (pandas.DataFrame): DataFrame containing mutant sequences and their corresponding expression levels.
+        region_params (list of tuples): List of parameters for binding site labelling.
+        nbins (int, optional): Number of bins for calculating mutual information. Defaults to 2.
+        up_scaling_factor (float, optional): Factor for scaling mean expression in order to obtain the boundary between the two bins. Defaults to 1.
+        pseudocount (float, optional): Pseudocount to avoid log of zero. Defaults to 10^(-6).
+        smoothed (bool, optional): Whether to apply smoothing to footprint. Defaults to True.
+        windowsize (int, optional): Window size for smoothing. Defaults to 3.
+        max_signal (float, optional): Maximum signal value for plot scaling. Defaults to None.
+        x_lims (tuple, optional): Limits for x-axis. Defaults to None.
+        fig_width (float, optional): Figure width. Defaults to 10.
+        fig_height (float, optional): Figure height. Defaults to 2.9.
+        outfile (str, optional): Path to save the plot. Defaults to None.
+        return_fp (bool, optional): If True, returns the footprint array. Defaults to False.
+
+    Returns:
+        np.array or None: The footprint array if return_fp is True; otherwise, None.
+    """
     
     mut_list = df['seq'].values
     mu_data = df['norm_ct_1']
@@ -404,6 +435,18 @@ def plot_footprint(promoter, df, region_params,
 def plot_exshift(promoter, df,
                  vmax_scaling=0.5,
                  outfile=None):
+    """
+    Plots a heatmap of expression shifts across the promoter sequence.
+
+    Args:
+        promoter (str): Wild type sequence of the promoter.
+        df (pandas.DataFrame): DataFrame containing mutant sequences and expression levels.
+        vmax_scaling (float, optional): Scaling factor for maximum color intensity. Defaults to 0.5.
+        outfile (str, optional): Path to save the plot. Defaults to None.
+
+    Returns:
+        None
+    """
     exshift = get_expression_shift_matrix(df, promoter)
 
     fig, ax = plt.subplots(figsize=(15, 2))
