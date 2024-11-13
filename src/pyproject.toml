@@ -20,5 +20,6 @@ dependencies = [
     "seaborn",
     "pandas",
     "sympy",
-    "ipykernel"
+    "ipykernel",
+    "scipy"
 ]
