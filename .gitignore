@@ -76,4 +76,5 @@ _site/
 library.bib
 **/stan/
 
-**.DS_Store
+**/.DS_Store
+*/.DS_Store
