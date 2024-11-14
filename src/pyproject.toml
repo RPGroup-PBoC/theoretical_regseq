@@ -21,5 +21,6 @@ dependencies = [
     "pandas",
     "sympy",
     "ipykernel",
-    "scipy"
+    "scipy",
+    "openpyxl"
 ]
