@@ -71,6 +71,7 @@ data/energy_matrix
 data/mi_freq_counts
 data/raw_sequencing
 data/microscopy
+exploratory
 _site/
 */stan_code/*
 library.bib

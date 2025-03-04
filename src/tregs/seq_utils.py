@@ -1,6 +1,7 @@
 from Bio.Seq import Seq
 
-def get_regulatory_region(genome, TSS, reverse=False):
+def get_regulatory_region(genome, TSS, reverse=False,
+                          length_upstream=0):
     '''
     given the full genomic sequence and the TSS, find the regulatory region,
     defined as the 115 bases upstream of the transcription start site
@@ -11,15 +12,16 @@ def get_regulatory_region(genome, TSS, reverse=False):
         TSS (int): transcription start site
         reverse (bool, optional): whether the regulatory region is on the
         reverse strand of the genomic DNA. defaults to False.
+        length_upstream (int, optional): number of bases upstream of the TSS
 
     Returns:
         str: 160bp sequence of the regulatory region
     '''    
 
     if not reverse:
-        region = genome[(TSS-115):(TSS+45)]
+        region = genome[(TSS-(115+length_upstream)):(TSS+45)]
     else:
-        _region = genome[(TSS-45):(TSS+115)]
+        _region = genome[(TSS-45):(TSS+(115+length_upstream))]
         region = str(Seq(_region).reverse_complement())
 
     return region
