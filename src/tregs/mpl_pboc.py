@@ -23,7 +23,7 @@ def plotting_style(grid=False):
       Returns a dictionary of the standard PBoC 2e color palette. 
     """
     rc = {'axes.facecolor': '#E3DCD0',
-          'font.family': 'Lucida Sans Unicode',
+          'font.family': 'DejaVu Sans',
           'grid.linestyle': '-',
           'grid.linewidth': 0.5,
           'grid.alpha': 0.75,
